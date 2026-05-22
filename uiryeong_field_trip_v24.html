@@ -1,0 +1,3542 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="의령초 수학여행">
+<meta name="theme-color" content="#5C3A0A">
+<title>의령초 6학년 수학여행</title>
+
+<!-- PWA 아이콘 (신라의 미소 SVG → base64 인라인) -->
+<link rel="apple-touch-icon" href="#" id="apple-icon">
+<link rel="icon" type="image/svg+xml" href="#" id="favicon-icon">
+<link rel="manifest" href="#" id="manifest-link">
+
+<script>
+// 첨성대 + 밤하늘 아이콘 — Canvas PNG (iOS 호환)
+function createSillaIcon(size) {
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const s = size / 512;
+
+  // ── 배경: 깊은 밤하늘 ──
+  const bg = ctx.createRadialGradient(256*s, 180*s, 20*s, 256*s, 256*s, 260*s);
+  bg.addColorStop(0, '#1A1040');
+  bg.addColorStop(1, '#060318');
+  ctx.beginPath();
+  ctx.arc(256*s, 256*s, 256*s, 0, Math.PI*2);
+  ctx.fillStyle = bg;
+  ctx.fill();
+
+  // ── 별들 ──
+  const stars = [
+    [40,35,1.8],[95,22,1.4],[170,15,2],[265,28,1.5],[355,18,2.2],[440,40,1.6],[490,25,1.2],
+    [55,80,1],[160,68,1.5],[430,75,1.2],[500,90,1],[28,150,1.4],[505,160,1],
+    [70,200,0.9],[490,210,1.3],[20,280,1],[510,300,1.2],[45,360,1.5],[495,370,1],
+  ];
+  stars.forEach(([x,y,r]) => {
+    ctx.beginPath();
+    ctx.arc(x*s, y*s, r*s, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,240,180,${0.5+Math.random()*0.5})`;
+    ctx.fill();
+  });
+
+  // ── 은하수 띠 ──
+  const mw = ctx.createLinearGradient(0, 60*s, 512*s, 180*s);
+  mw.addColorStop(0, 'rgba(180,180,255,0)');
+  mw.addColorStop(0.4, 'rgba(180,180,255,0.07)');
+  mw.addColorStop(0.6, 'rgba(200,200,255,0.1)');
+  mw.addColorStop(1, 'rgba(180,180,255,0)');
+  ctx.fillStyle = mw;
+  ctx.fillRect(0, 0, 512*s, 512*s);
+
+  // ── 달 (초승달) ──
+  ctx.beginPath();
+  ctx.arc(148*s, 80*s, 34*s, 0, Math.PI*2);
+  ctx.fillStyle = '#FFF5C0';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(163*s, 72*s, 30*s, 0, Math.PI*2);
+  ctx.fillStyle = '#060318';
+  ctx.fill();
+  // 달 광채
+  const moonGlow = ctx.createRadialGradient(148*s,80*s,28*s, 148*s,80*s,60*s);
+  moonGlow.addColorStop(0, 'rgba(255,245,180,0.18)');
+  moonGlow.addColorStop(1, 'rgba(255,245,180,0)');
+  ctx.beginPath();
+  ctx.arc(148*s, 80*s, 60*s, 0, Math.PI*2);
+  ctx.fillStyle = moonGlow;
+  ctx.fill();
+
+  // ── 땅 (기단 아래) ──
+  ctx.beginPath();
+  ctx.ellipse(256*s, 430*s, 200*s, 24*s, 0, 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(60,110,60,0.55)';
+  ctx.fill();
+  // 풀밭 느낌
+  const grass = ctx.createLinearGradient(0, 406*s, 0, 440*s);
+  grass.addColorStop(0, 'rgba(50,100,50,0.7)');
+  grass.addColorStop(1, 'rgba(20,60,20,0)');
+  ctx.fillStyle = grass;
+  ctx.fillRect(60*s, 406*s, 392*s, 34*s);
+
+  // ── 첨성대 기단부 ──
+  const stoneColor = (light) => {
+    const v = Math.round(light);
+    return `rgb(${v+30},${v+22},${v+8})`;
+  };
+  // 기단 (정사각 받침)
+  ctx.beginPath();
+  ctx.roundRect(194*s, 390*s, 124*s, 20*s, 3*s);
+  ctx.fillStyle = stoneColor(100);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.roundRect(198*s, 386*s, 116*s, 8*s, 2*s);
+  ctx.fillStyle = stoneColor(120);
+  ctx.fill();
+
+  // ── 첨성대 몸통 (27단 원통형, 아래서 위로 좁아짐) ──
+  const towerLayers = 27;
+  const towerBottom = 386, towerTop = 188;
+  const towerHeight = towerBottom - towerTop;
+  for (let i = 0; i < towerLayers; i++) {
+    const t = i / towerLayers;
+    const y = towerBottom - (i / towerLayers) * towerHeight;
+    // 아래가 넓고 위로 갈수록 좁아지는 비율 (실제 첨성대처럼)
+    const widthFactor = 0.78 + 0.22 * Math.pow(1 - t, 1.5);
+    const w = 80 * s * widthFactor;
+    const cx = 256 * s;
+    const h = (towerHeight / towerLayers) * s + 1;
+
+    // 층 배경
+    const layerGrad = ctx.createLinearGradient(cx-w, 0, cx+w, 0);
+    layerGrad.addColorStop(0, stoneColor(55));
+    layerGrad.addColorStop(0.15, stoneColor(90));
+    layerGrad.addColorStop(0.5, stoneColor(115));
+    layerGrad.addColorStop(0.85, stoneColor(80));
+    layerGrad.addColorStop(1, stoneColor(45));
+    ctx.beginPath();
+    ctx.roundRect(cx - w, y * s - h, w * 2, h + 1, 1*s);
+    ctx.fillStyle = layerGrad;
+    ctx.fill();
+
+    // 층 구분선
+    if (i > 0) {
+      ctx.beginPath();
+      ctx.moveTo((cx - w) + 2*s, y * s);
+      ctx.lineTo((cx + w) - 2*s, y * s);
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.lineWidth = 1 * s;
+      ctx.stroke();
+    }
+
+    // 중간 창문 (13번째 층, 실제 첨성대 위치)
+    if (i === 12) {
+      ctx.beginPath();
+      ctx.roundRect(cx - 14*s, y*s - h*1.1, 28*s, h*1.4, 2*s);
+      ctx.fillStyle = 'rgba(5,5,25,0.9)';
+      ctx.fill();
+      ctx.strokeStyle = stoneColor(70);
+      ctx.lineWidth = 1.5*s;
+      ctx.stroke();
+    }
+  }
+
+  // ── 첨성대 정상부 (井字石) ──
+  const topY = towerTop * s;
+  const topW = 80 * s * (0.78 + 0.22 * 0);
+  ctx.beginPath();
+  ctx.roundRect(256*s - topW - 6*s, topY - 14*s, (topW + 6*s)*2, 14*s, 2*s);
+  ctx.fillStyle = stoneColor(110);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.roundRect(256*s - topW - 2*s, topY - 24*s, (topW + 2*s)*2, 12*s, 2*s);
+  ctx.fillStyle = stoneColor(125);
+  ctx.fill();
+
+  // ── 첨성대 아래 조명 발광 ──
+  const glow = ctx.createRadialGradient(256*s, 390*s, 0, 256*s, 390*s, 130*s);
+  glow.addColorStop(0, 'rgba(255,220,100,0.22)');
+  glow.addColorStop(0.4, 'rgba(255,200,80,0.1)');
+  glow.addColorStop(1, 'rgba(255,180,60,0)');
+  ctx.beginPath();
+  ctx.arc(256*s, 390*s, 130*s, 0, Math.PI*2);
+  ctx.fillStyle = glow;
+  ctx.fill();
+
+  // ── 전체 원형 마스크 재적용 (테두리 밖 제거) ──
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.beginPath();
+  ctx.arc(256*s, 256*s, 256*s, 0, Math.PI*2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+
+  // ── 하단 텍스트 배경 ──
+  ctx.fillStyle = 'rgba(0,0,15,0.6)';
+  ctx.beginPath();
+  ctx.roundRect(118*s, 440*s, 276*s, 36*s, [12*s]);
+  ctx.fill();
+  ctx.fillStyle = '#FFE999';
+  ctx.font = `bold ${16*s}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('의령초 수학여행', 256*s, 458*s);
+
+  return c.toDataURL('image/png');
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  const png192 = createSillaIcon(192);
+  const png512 = createSillaIcon(512);
+  document.getElementById('apple-icon').href = png512;
+  document.getElementById('favicon-icon').href = png192;
+  const manifest = {
+    name:'의령초 6학년 수학여행', short_name:'수학여행',
+    description:'의령초등학교 6학년 경주 수학여행 앱',
+    start_url:'.', display:'standalone',
+    background_color:'#0A0520', theme_color:'#5C3A0A',
+    orientation:'portrait',
+    icons:[
+      {src:png192,sizes:'192x192',type:'image/png',purpose:'any maskable'},
+      {src:png512,sizes:'512x512',type:'image/png',purpose:'any maskable'},
+    ]
+  };
+  const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  document.getElementById('manifest-link').href=URL.createObjectURL(blob);
+});
+</script>
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.2.0/dist/tabler-icons.min.css" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&family=Noto+Serif+KR:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --primary: #8B5E1A;
+  --primary-light: #FDF5E0;
+  --primary-dark: #5C3A0A;
+  --gold: #C8922A;
+  --gold-bright: #E8B84B;
+  --gold-light: #FEF3C7;
+  --terracotta: #A0522D;
+  --terra-light: #FBE9DC;
+  --moss: #4A6741;
+  --moss-light: #DFF0D8;
+  --ink: #2D2416;
+  --stone: #7A6E5F;
+  --cream: #FAF6EE;
+  --accent: #3D6B8E;
+  --accent-light: #E0EEF8;
+  --purple: #6B4E8B;
+  --purple-light: #EFE8F8;
+  --red: #B94040;
+  --red-light: #FDECEA;
+  --green: #4A6741;
+  --green-light: #DFF0D8;
+  --yellow: #C8922A;
+  --bg: #FAF6EE;
+  --card: #FFFDF8;
+  --text: #2D2416;
+  --text-muted: #7A6E5F;
+  --border: rgba(139,94,26,0.15);
+  --radius: 12px;
+  --shadow: 0 2px 16px rgba(93,58,10,0.10);
+}
+
+html, body { height: 100%; font-family: 'Noto Sans KR', sans-serif; background: var(--cream); color: var(--ink); }
+.app { max-width: 430px; margin: 0 auto; min-height: 100vh; background: var(--cream); display: flex; flex-direction: column; }
+
+/* ======== HEADER ======== */
+.header {
+  background: linear-gradient(160deg, #5C3A0A 0%, #8B5E1A 45%, #A07020 100%);
+  color: #FFF8E7;
+  padding: 0 0 0 0;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+/* 기와 지붕 곡선 장식 */
+.header-roof {
+  background: linear-gradient(160deg, #4A2D08 0%, #7A5218 60%, #9A6A20 100%);
+  padding: 6px 16px 4px;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 2px solid rgba(232,184,75,0.4);
+}
+.header-roof-pattern {
+  display: flex; gap: 0; align-items: flex-end; opacity: 0.5;
+}
+.header-roof-tile {
+  width: 18px; height: 8px;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: rgba(232,184,75,0.6);
+  margin-right: 2px;
+}
+.header-body { padding: 14px 16px 16px; position: relative; }
+/* 금빛 무늬 장식 */
+.header-body::before {
+  content: '';
+  position: absolute; top: 0; right: -20px;
+  width: 160px; height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,184,75,0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+.header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.header-title {
+  font-family: 'Noto Serif KR', serif;
+  font-size: 20px; font-weight: 900; letter-spacing: -0.3px;
+  color: #FFF8E7;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+.header-sub { font-size: 11px; opacity: 0.80; margin-top: 3px; color: #F5E6C8; }
+.dday-badge {
+  background: linear-gradient(135deg, rgba(232,184,75,0.35), rgba(200,146,42,0.25));
+  border: 1px solid rgba(232,184,75,0.5);
+  border-radius: 10px; padding: 6px 12px; text-align: center; flex-shrink: 0;
+  backdrop-filter: blur(4px);
+}
+.dday-num { font-size: 21px; font-weight: 800; line-height: 1; color: #FFE999; }
+.dday-label { font-size: 10px; opacity: 0.9; color: #F5E6C8; }
+.header-date {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: rgba(232,184,75,0.2); border: 1px solid rgba(232,184,75,0.35);
+  border-radius: 20px; padding: 4px 10px;
+  font-size: 11px; font-weight: 600; margin-top: 10px; color: #F5E6C8;
+}
+/* 하단 기와 곡선 */
+.header-wave {
+  height: 14px; background: var(--cream); position: relative; margin-top: -1px;
+  border-radius: 0;
+}
+.header-wave::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 14px;
+  background: linear-gradient(160deg, #9A6A20 0%, #8B5E1A 100%);
+  clip-path: ellipse(52% 100% at 50% 0%);
+}
+.header-admin-btn {
+  background: rgba(232,184,75,0.25); border: 1px solid rgba(232,184,75,0.4);
+  color: #FFE999; border-radius: 8px; padding: 5px 9px; font-size: 10px;
+  cursor: pointer; font-family: inherit; font-weight: 600;
+}
+
+/* ======== NAV ======== */
+.nav {
+  display: flex;
+  background: var(--card);
+  border-bottom: 2px solid rgba(139,94,26,0.18);
+  overflow-x: auto; scrollbar-width: none;
+  position: sticky; top: 0; z-index: 100;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(93,58,10,0.08);
+}
+.nav::-webkit-scrollbar { display: none; }
+.nav-btn {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 9px 13px 7px; border: none; background: none; cursor: pointer;
+  font-size: 10px; color: var(--stone); gap: 2px; white-space: nowrap;
+  border-bottom: 2.5px solid transparent; transition: all 0.15s;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.nav-btn i { font-size: 18px; }
+.nav-btn.active { color: var(--primary); border-bottom-color: var(--gold); }
+
+/* ======== CONTENT ======== */
+.content { flex: 1; overflow-y: auto; }
+.section { display: none; padding: 14px; animation: fadeIn 0.2s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+.section-header {
+  font-size: 15px; font-weight: 700; color: var(--ink);
+  margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid var(--border);
+}
+
+/* ======== CARDS ======== */
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  border-top: 2.5px solid rgba(200,146,42,0.35);
+  padding: 14px; margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 13px; font-weight: 700; color: var(--ink);
+  display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+}
+
+/* ======== SCHEDULE ======== */
+.day-tab-row { display: flex; gap: 8px; margin-bottom: 14px; }
+.day-tab {
+  flex: 1; padding: 10px 8px; text-align: center; border-radius: 10px;
+  border: 1.5px solid var(--border); font-size: 12px; font-weight: 600;
+  cursor: pointer; background: var(--card); transition: all 0.15s; color: var(--ink);
+}
+.day-tab .day-sub { font-weight: 400; font-size: 11px; margin-top: 1px; opacity: 0.7; }
+.day-tab.active {
+  background: linear-gradient(135deg, #7A5218, #9A6A20);
+  color: #FFE999; border-color: var(--gold);
+  box-shadow: 0 2px 10px rgba(139,94,26,0.25);
+}
+.day-tab.active .day-sub { opacity: 0.85; }
+.timeline { position: relative; }
+.tl-item { display: flex; gap: 10px; padding-bottom: 14px; position: relative; }
+.tl-item::before {
+  content: ''; position: absolute;
+  left: 65px; top: 24px; width: 2px;
+  height: calc(100% - 8px);
+  background: linear-gradient(to bottom, rgba(200,146,42,0.4), rgba(200,146,42,0.1));
+}
+.tl-item:last-child::before { display: none; }
+.tl-time { width: 56px; flex-shrink:0; font-size:11px; font-weight:700; color:var(--primary); padding-top:4px; text-align:right; }
+.tl-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--gold); flex-shrink:0; margin-top:4px; z-index:1;
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+.tl-dot.meal { background: var(--moss); box-shadow: 0 0 0 3px var(--moss-light); }
+.tl-dot.activity { background: var(--terracotta); box-shadow: 0 0 0 3px var(--terra-light); }
+.tl-dot.stay { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.tl-content { flex: 1; }
+.tl-name { font-size: 13px; font-weight: 500; line-height: 1.4; }
+.tl-badge {
+  display: inline-block; font-size: 10px; padding: 2px 7px;
+  border-radius: 10px; margin-top: 3px; font-weight: 600;
+}
+.badge-sight { background: var(--primary-light); color: var(--primary-dark); border: 1px solid rgba(139,94,26,0.2); }
+.badge-meal { background: var(--moss-light); color: #2D5023; border: 1px solid rgba(74,103,65,0.2); }
+.badge-activity { background: var(--terra-light); color: #6B3520; border: 1px solid rgba(160,82,45,0.2); }
+.badge-stay { background: var(--accent-light); color: #1E4A6B; border: 1px solid rgba(61,107,142,0.2); }
+.badge-go { background: #EDE8E0; color: #5C4F3A; border: 1px solid rgba(122,110,95,0.2); }
+
+/* ======== CHECKLIST ======== */
+.check-progress { margin-bottom: 12px; }
+.progress-text { font-size: 12px; color: var(--stone); margin-bottom: 5px; display: flex; justify-content: space-between; }
+.progress-bar { height: 7px; background: #E5DDD0; border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--moss), #6A9660); border-radius: 4px; transition: width 0.4s; }
+.check-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer;
+}
+.check-item:last-child { border-bottom: none; }
+.checkbox {
+  width: 22px; height: 22px; border-radius: 6px;
+  border: 2px solid rgba(139,94,26,0.3); display: flex; align-items: center;
+  justify-content: center; transition: all 0.15s; flex-shrink: 0; font-size: 13px;
+}
+.check-item.checked .checkbox { background: var(--moss); border-color: var(--moss); color: white; }
+.check-item.checked .check-label { text-decoration: line-through; color: var(--stone); }
+.check-label { font-size: 13px; }
+.check-cat {
+  font-size: 11px; color: #FFE999;
+  background: linear-gradient(90deg, var(--primary), var(--gold));
+  border-radius: 8px; padding: 2px 8px; margin-bottom: 6px; display: inline-block;
+  font-weight: 600;
+}
+
+/* ======== BUDGET ======== */
+.budget-display {
+  text-align: center; padding: 18px;
+  background: linear-gradient(135deg, #FDF5E0, #FEF3C7);
+  border-radius: 12px; margin-bottom: 12px;
+  border: 1px solid rgba(200,146,42,0.3);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.budget-label { font-size: 11px; color: var(--stone); margin-bottom: 2px; }
+.budget-amount { font-size: 30px; font-weight: 800; color: var(--primary-dark); letter-spacing: -1px; }
+.budget-sub { font-size: 11px; color: var(--stone); margin-top: 2px; }
+.input-row { display: flex; gap: 7px; margin-bottom: 10px; }
+.input-row input {
+  flex: 1; padding: 9px 11px; border-radius: 9px;
+  border: 1.5px solid var(--border); font-size: 13px;
+  background: var(--card); outline: none; font-family: inherit;
+  color: var(--ink);
+}
+.input-row input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,146,42,0.12); }
+.btn-primary {
+  padding: 9px 14px; border-radius: 9px;
+  background: linear-gradient(135deg, #7A5218, #9A6A20);
+  color: #FFE999; border: none; font-size: 12px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; font-family: inherit;
+  box-shadow: 0 2px 6px rgba(93,58,10,0.2);
+}
+.btn-primary:active { opacity: 0.9; transform: scale(0.98); }
+.btn-danger {
+  padding: 6px 10px; border-radius: 7px; background: var(--red-light);
+  color: var(--red); border: 1px solid rgba(185,64,64,0.2);
+  font-size: 11px; cursor: pointer; font-family: inherit;
+}
+.expense-list { max-height: 220px; overflow-y: auto; }
+.expense-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+}
+.expense-item:last-child { border-bottom: none; }
+.expense-label { color: var(--stone); flex: 1; }
+.expense-amt { font-weight: 700; color: var(--red); margin-left: 8px; }
+.empty-state { font-size: 12px; color: var(--stone); text-align: center; padding: 16px 0; }
+
+/* ======== MISSIONS ======== */
+.site-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  padding: 14px; margin-bottom: 10px;
+  cursor: pointer; transition: all 0.15s;
+  box-shadow: var(--shadow);
+}
+.site-card:active { transform: scale(0.98); }
+.site-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.site-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; flex-shrink: 0;
+  border: 1px solid rgba(200,146,42,0.2);
+}
+.site-name { font-size: 14px; font-weight: 700; color: var(--ink); }
+.site-desc { font-size: 12px; color: var(--stone); line-height: 1.5; }
+.site-meta { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.site-tag {
+  font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 600;
+  background: var(--primary-light); color: var(--primary-dark);
+  border: 1px solid rgba(139,94,26,0.2);
+}
+.site-tag.green { background: var(--moss-light); color: #2D5023; border-color: rgba(74,103,65,0.2); }
+.site-tag.purple { background: var(--purple-light); color: #3D1F6B; border-color: rgba(107,78,139,0.2); }
+.site-tag.blue { background: var(--accent-light); color: #1E4A6B; border-color: rgba(61,107,142,0.2); }
+
+/* 미션 모달 */
+.mission-modal {
+  position: fixed; inset: 0; background: rgba(45,36,22,0.7);
+  z-index: 200; display: none; align-items: flex-end; justify-content: center;
+}
+.mission-modal.open { display: flex; }
+.mission-sheet {
+  background: var(--cream);
+  border-radius: 20px 20px 0 0; width: 100%;
+  max-width: 430px; max-height: 90vh; overflow-y: auto;
+  padding: 0 0 32px; animation: slideUp 0.3s ease;
+  border-top: 3px solid var(--gold);
+}
+/* 모달 헤더 장식 */
+.mission-sheet-header {
+  background: linear-gradient(135deg, #5C3A0A, #8B5E1A);
+  border-radius: 18px 18px 0 0;
+  padding: 16px 16px 14px;
+  margin-bottom: 16px;
+}
+.mission-sheet-body { padding: 0 16px; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-handle {
+  width: 36px; height: 4px; background: rgba(255,233,153,0.5);
+  border-radius: 2px; margin: 0 auto 12px;
+}
+.modal-title { font-size: 17px; font-weight: 800; color: #FFE999; font-family: 'Noto Serif KR', serif; }
+.modal-subtitle { font-size: 11px; color: rgba(245,230,200,0.85); margin-top: 4px; }
+
+/* 퀴즈 블록 */
+.quiz-block {
+  background: var(--card);
+  border-radius: 12px; padding: 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-top: 2px solid rgba(200,146,42,0.3);
+  box-shadow: 0 1px 6px rgba(93,58,10,0.06);
+}
+.quiz-type-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+  margin-bottom: 8px;
+}
+.type-quiz { background: var(--purple-light); color: #3D1F6B; }
+.type-riddle { background: var(--gold-light); color: #5C3A0A; }
+.type-chosung { background: var(--moss-light); color: #2D5023; }
+.type-blank { background: var(--accent-light); color: #1E4A6B; }
+.type-oxquiz { background: var(--red-light); color: #7A2020; }
+.type-order { background: var(--terra-light); color: #5C2A10; }
+
+.quiz-q { font-size: 13px; font-weight: 600; margin-bottom: 10px; line-height: 1.5; color: var(--ink); }
+.quiz-hint {
+  font-size: 11px; color: var(--primary-dark);
+  background: var(--gold-light);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0; padding: 6px 10px; margin-bottom: 10px;
+}
+.quiz-options { display: flex; flex-direction: column; gap: 7px; }
+.quiz-opt {
+  padding: 9px 12px; border-radius: 9px;
+  border: 1.5px solid var(--border);
+  font-size: 12px; cursor: pointer; transition: all 0.15s;
+  background: var(--cream); font-family: inherit; text-align: left; color: var(--ink);
+}
+.quiz-opt:hover:not(:disabled) { border-color: var(--gold); background: var(--primary-light); }
+.quiz-opt.correct { background: var(--moss-light); border-color: var(--moss); color: #2D5023; font-weight: 600; }
+.quiz-opt.wrong { background: var(--red-light); border-color: var(--red); color: var(--red); }
+
+/* OX 퀴즈 */
+.ox-options { display: flex; gap: 10px; }
+.ox-btn {
+  flex: 1; padding: 16px; border-radius: 12px;
+  border: 2px solid var(--border);
+  font-size: 28px; cursor: pointer; background: var(--cream);
+  transition: all 0.15s; font-family: inherit; text-align: center; line-height: 1;
+}
+.ox-btn:hover:not(:disabled) { transform: scale(1.05); border-color: var(--gold); }
+.ox-btn.correct { background: var(--moss-light); border-color: var(--moss); }
+.ox-btn.wrong { background: var(--red-light); border-color: var(--red); }
+
+/* 빈칸 */
+.blank-input-row { display: flex; gap: 7px; margin-top: 8px; }
+.blank-input {
+  flex: 1; padding: 9px 12px; border-radius: 9px;
+  border: 1.5px solid var(--border); font-size: 14px;
+  font-family: inherit; outline: none; letter-spacing: 2px;
+  background: var(--cream); color: var(--ink);
+}
+.blank-input:focus { border-color: var(--gold); }
+.blank-input.correct { border-color: var(--moss); background: var(--moss-light); }
+.blank-input.wrong { border-color: var(--red); background: var(--red-light); }
+
+.quiz-result { font-size: 12px; padding: 8px 12px; border-radius: 8px; margin-top: 8px; display: none; line-height: 1.5; }
+.quiz-result.show { display: block; }
+.quiz-result.ok { background: var(--moss-light); color: #2D5023; border: 1px solid rgba(74,103,65,0.3); }
+.quiz-result.no { background: var(--red-light); color: var(--red); border: 1px solid rgba(185,64,64,0.3); }
+.mission-score {
+  text-align: center; padding: 14px;
+  background: linear-gradient(135deg, var(--primary-light), var(--gold-light));
+  border-radius: 12px; margin-bottom: 14px;
+  border: 1px solid rgba(200,146,42,0.3);
+}
+.mission-score-num { font-size: 28px; font-weight: 800; color: var(--primary-dark); font-family: 'Noto Serif KR', serif; }
+.mission-score-label { font-size: 11px; color: var(--stone); }
+
+/* ======== 사진 미션 ======== */
+.photo-mission-card {
+  background: var(--card); border-radius: var(--radius);
+  border: 1px solid var(--border); border-left: 3px solid var(--terracotta);
+  padding: 14px; margin-bottom: 10px; transition: all 0.15s;
+  box-shadow: var(--shadow);
+}
+.photo-mission-card.completed { border-color: var(--moss); border-left-color: var(--moss); background: #F5FBF3; }
+.photo-mission-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.photo-mission-icon {
+  width: 44px; height: 44px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+  border: 1px solid rgba(200,146,42,0.2);
+}
+.photo-mission-title { font-size: 13px; font-weight: 700; color: var(--ink); }
+.photo-mission-desc { font-size: 12px; color: var(--stone); line-height: 1.5; margin-bottom: 8px; }
+.photo-mission-pts {
+  font-size: 11px; font-weight: 700; color: var(--primary-dark);
+  background: var(--gold-light); border: 1px solid rgba(200,146,42,0.3);
+  border-radius: 8px; padding: 2px 8px; display: inline-block;
+}
+.photo-upload-zone {
+  border: 2px dashed rgba(139,94,26,0.25); border-radius: 10px;
+  padding: 16px; text-align: center; cursor: pointer;
+  margin-top: 8px; transition: all 0.15s; background: var(--cream);
+}
+.photo-upload-zone:hover { border-color: var(--gold); background: var(--primary-light); }
+.photo-upload-zone.has-photo { border-style: solid; border-color: var(--moss); background: #F5FBF3; }
+.photo-preview {
+  width: 100%; border-radius: 8px; margin-top: 8px;
+  max-height: 200px; object-fit: cover; display: none;
+}
+.photo-preview.show { display: block; }
+.ai-judge-btn {
+  width: 100%; padding: 10px; border-radius: 9px;
+  background: linear-gradient(135deg, #4A2D8B, #6B4E8B);
+  color: #F0E6FF; border: none; font-size: 12px; font-weight: 700;
+  cursor: pointer; margin-top: 8px; font-family: inherit;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.ai-judge-result {
+  background: var(--purple-light); border: 1px solid rgba(107,78,139,0.3);
+  border-radius: 8px; padding: 10px; font-size: 12px; color: #3D1F6B;
+  margin-top: 8px; line-height: 1.6; display: none;
+}
+.ai-judge-result.show { display: block; }
+.complete-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--moss); color: white; border-radius: 8px;
+  padding: 4px 10px; font-size: 11px; font-weight: 700; margin-top: 6px;
+}
+.photo-mission-progress {
+  background: var(--card); border-radius: 12px; border: 1px solid var(--border);
+  border-top: 2.5px solid var(--gold);
+  padding: 14px; margin-bottom: 12px; box-shadow: var(--shadow);
+}
+
+/* ======== PHOTOS ======== */
+.photo-upload-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; padding: 14px; border-radius: 12px;
+  border: 2px dashed rgba(139,94,26,0.25); background: var(--card);
+  font-size: 13px; color: var(--stone); cursor: pointer;
+  margin-bottom: 12px; font-family: inherit; transition: all 0.15s;
+}
+.photo-upload-btn:hover { border-color: var(--gold); color: var(--primary); background: var(--primary-light); }
+.photo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.photo-item { border-radius: 10px; overflow: hidden; aspect-ratio: 1; position: relative; }
+.photo-item img { width: 100%; height: 100%; object-fit: cover; }
+.photo-item-label {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(transparent, rgba(45,36,22,0.75));
+  color: #FFE999; font-size: 10px; padding: 8px 6px 4px; font-weight: 500;
+}
+.photo-delete {
+  position: absolute; top: 4px; right: 4px;
+  background: rgba(45,36,22,0.6); color: white; border: none; border-radius: 50%;
+  width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 12px;
+}
+.ai-caption-btn {
+  padding: 8px 12px; border-radius: 8px; background: var(--accent-light);
+  color: #1E4A6B; border: 1px solid rgba(61,107,142,0.2);
+  font-size: 11px; font-weight: 600;
+  cursor: pointer; margin-top: 6px; font-family: inherit;
+  display: flex; align-items: center; gap: 4px;
+}
+.ai-caption-result {
+  background: var(--accent-light); border: 1px solid rgba(61,107,142,0.25);
+  border-radius: 8px; padding: 10px; font-size: 12px; color: #1E4A6B;
+  margin-top: 8px; line-height: 1.6; display: none;
+}
+.ai-caption-result.show { display: block; }
+
+/* ======== SEATING / ROOM ======== */
+.tabs-small { display: flex; gap: 6px; margin-bottom: 12px; }
+.tab-s {
+  flex: 1; padding: 7px; text-align: center; border-radius: 8px;
+  border: 1px solid var(--border); font-size: 11px; font-weight: 600;
+  cursor: pointer; background: var(--card); transition: all 0.15s;
+  font-family: inherit; color: var(--stone);
+}
+.tab-s.active { background: linear-gradient(135deg, #2E4A6B, #3D6B8E); color: #E0EEF8; border-color: var(--accent); }
+.seat {
+  padding: 8px 6px; border-radius: 8px; text-align: center;
+  font-size: 11px; font-weight: 600; border: 1px solid var(--border);
+  background: var(--card); min-height: 44px; display: flex; align-items: center;
+  justify-content: center; flex-direction: column; gap: 2px; cursor: pointer;
+  transition: all 0.15s;
+}
+.seat.taken { background: var(--primary-light); border-color: rgba(200,146,42,0.4); color: var(--primary-dark); }
+.seat.mine {
+  background: linear-gradient(135deg, #7A5218, #9A6A20);
+  color: #FFE999; border-color: var(--gold);
+  box-shadow: 0 2px 8px rgba(139,94,26,0.25);
+}
+.seat.empty { background: var(--cream); color: rgba(139,94,26,0.25); }
+.seat-name { font-size: 10px; font-weight: 400; }
+.bus-front {
+  background: linear-gradient(90deg, #EDE8E0, #F5F0E8);
+  border-radius: 10px; padding: 8px;
+  text-align: center; font-size: 11px; color: var(--stone);
+  margin-bottom: 8px; font-weight: 600;
+  border: 1px solid var(--border);
+}
+.room-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.room-card {
+  background: var(--card); border-radius: 10px; padding: 10px;
+  border: 1px solid var(--border); border-top: 2px solid rgba(61,107,142,0.4);
+}
+.room-num { font-size: 11px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+.room-member { font-size: 11px; color: var(--ink); padding: 3px 0; border-bottom: 1px solid var(--border); }
+.room-member:last-child { border-bottom: none; }
+
+/* ======== RANKING ======== */
+.rank-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+}
+.rank-item:last-child { border-bottom: none; }
+.rank-badge {
+  width: 28px; height: 28px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-size: 13px; font-weight: 800;
+  flex-shrink: 0;
+}
+.rank-1 { background: linear-gradient(135deg, #E8B84B, #C8922A); color: white; box-shadow: 0 2px 6px rgba(200,146,42,0.4); }
+.rank-2 { background: #E8E4DC; color: var(--stone); }
+.rank-3 { background: var(--terra-light); color: var(--terracotta); }
+.rank-other { background: var(--primary-light); color: var(--primary-dark); font-size: 11px; }
+.rank-name { flex: 1; font-size: 13px; font-weight: 600; color: var(--ink); }
+.rank-pts { font-size: 16px; font-weight: 800; color: var(--primary); }
+.rank-input-form {
+  background: var(--primary-light); border-radius: 10px; padding: 12px; margin-bottom: 12px;
+  border: 1px solid rgba(139,94,26,0.2);
+}
+.rank-input-form .form-label { font-size: 11px; font-weight: 600; color: var(--primary-dark); margin-bottom: 6px; }
+
+/* ======== GUIDE ======== */
+.guide-item {
+  background: var(--card); border-radius: var(--radius);
+  border: 1px solid var(--border); overflow: hidden; margin-bottom: 10px;
+  box-shadow: var(--shadow);
+}
+.guide-thumb {
+  width: 100%; height: 160px;
+  display: flex; align-items: center; justify-content: center; font-size: 48px;
+  border-bottom: 1px solid var(--border); overflow: hidden; position: relative;
+  background: #f0ebe0;
+}
+.guide-thumb img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.guide-thumb-fallback {
+  position: absolute; font-size: 48px;
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%;
+}
+.guide-body { padding: 12px; }
+.guide-name { font-size: 14px; font-weight: 700; margin-bottom: 4px; color: var(--ink); font-family: 'Noto Serif KR', serif; }
+.guide-desc { font-size: 12px; color: var(--stone); line-height: 1.6; }
+.guide-tip {
+  background: var(--gold-light); border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0; padding: 8px 10px; margin-top: 8px;
+  font-size: 11px; color: var(--primary-dark); line-height: 1.5;
+}
+.guide-map-btn {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--accent-light); color: #1E4A6B;
+  border: 1px solid rgba(61,107,142,0.2); border-radius: 8px; padding: 7px 12px;
+  font-size: 11px; font-weight: 600; cursor: pointer;
+  margin-top: 8px; font-family: inherit; text-decoration: none;
+}
+
+/* ======== NOTICE / EMERGENCY ======== */
+.notice-item { display: flex; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.notice-item:last-child { border-bottom: none; }
+.notice-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--primary-light); color: var(--primary-dark);
+  font-size: 11px; font-weight: 700; display: flex; align-items: center;
+  justify-content: center; flex-shrink: 0; margin-top: 1px;
+  border: 1px solid rgba(139,94,26,0.2);
+}
+.notice-text { font-size: 12px; line-height: 1.6; color: var(--ink); }
+.info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.info-row:last-child { border-bottom: none; }
+.info-key { color: var(--stone); }
+.info-val { font-weight: 600; color: var(--ink); }
+.contact-btn {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px; text-decoration: none; color: var(--ink);
+  margin-bottom: 8px; transition: all 0.15s;
+  box-shadow: 0 1px 4px rgba(93,58,10,0.06);
+}
+.contact-btn:active { transform: scale(0.98); }
+.contact-icon {
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;
+}
+.contact-icon.t { background: var(--primary-light); color: var(--primary); border: 1px solid rgba(139,94,26,0.2); }
+.contact-icon.a { background: var(--accent-light); color: var(--accent); border: 1px solid rgba(61,107,142,0.2); }
+.contact-icon.e { background: var(--red-light); color: var(--red); border: 1px solid rgba(185,64,64,0.2); }
+.contact-name { font-weight: 600; font-size: 13px; color: var(--ink); }
+.contact-num { font-size: 11px; color: var(--stone); margin-top: 1px; }
+.contact-call { margin-left: auto; font-size: 20px; color: var(--moss); }
+
+/* ======== SPINNER ======== */
+.spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: white; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ======== ADMIN MODAL ======== */
+.admin-modal {
+  position: fixed; inset: 0; background: rgba(45,36,22,0.75);
+  z-index: 300; display: none; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.admin-modal.open { display: flex; }
+.admin-sheet {
+  background: var(--cream); border-radius: 20px; width: 100%;
+  max-width: 400px; max-height: 92vh; overflow-y: auto;
+  animation: fadeInUp 0.3s ease;
+  border: 1px solid rgba(200,146,42,0.3);
+}
+@keyframes fadeInUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+.admin-header {
+  background: linear-gradient(135deg, #3A2208, #5C3A0A);
+  color: #FFE999; padding: 18px 18px 16px; border-radius: 20px 20px 0 0;
+  display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 2px solid rgba(232,184,75,0.3);
+}
+.admin-header-title { font-size: 16px; font-weight: 800; font-family: 'Noto Serif KR', serif; }
+.admin-header-sub { font-size: 11px; opacity: 0.65; margin-top: 2px; color: #F5E6C8; }
+.admin-close {
+  background: rgba(232,184,75,0.2); border: 1px solid rgba(232,184,75,0.3);
+  color: #FFE999; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+  font-size: 16px; display: flex; align-items: center; justify-content: center;
+  font-family: inherit; flex-shrink: 0;
+}
+.admin-body { padding: 16px; }
+.admin-section { margin-bottom: 20px; }
+.admin-section-title {
+  font-size: 11px; font-weight: 700; color: var(--stone);
+  text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 6px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.admin-field { margin-bottom: 10px; }
+.admin-field label { font-size: 11px; font-weight: 600; color: var(--stone); display: block; margin-bottom: 4px; }
+.admin-field input, .admin-field textarea, .admin-field select {
+  width: 100%; padding: 9px 11px; border-radius: 9px;
+  border: 1.5px solid var(--border); font-size: 13px;
+  background: var(--card); outline: none; font-family: inherit;
+  color: var(--ink); transition: all 0.15s;
+}
+.admin-field input:focus, .admin-field textarea:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,146,42,0.1); }
+.admin-field textarea { resize: vertical; min-height: 60px; }
+.admin-save-btn {
+  width: 100%; padding: 12px; border-radius: 10px;
+  background: linear-gradient(135deg, #5C3A0A, #8B5E1A);
+  color: #FFE999; border: none; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit; margin-top: 4px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  box-shadow: 0 3px 10px rgba(93,58,10,0.25);
+}
+.admin-save-btn:active { opacity: 0.9; }
+.admin-tab-row { display: flex; gap: 6px; margin-bottom: 16px; }
+.admin-tab {
+  flex: 1; padding: 8px 6px; text-align: center; border-radius: 9px;
+  border: 1.5px solid var(--border); font-size: 11px; font-weight: 600;
+  cursor: pointer; background: var(--card); transition: all 0.15s;
+  font-family: inherit; color: var(--stone);
+}
+.admin-tab.active { background: linear-gradient(135deg, #4A2D08, #7A5218); color: #FFE999; border-color: var(--gold); }
+.admin-contact-item {
+  background: var(--card); border-radius: 10px; padding: 10px; margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
+.admin-contact-item label { font-size: 10px; font-weight: 600; color: var(--stone); display: block; margin-bottom: 3px; }
+.admin-contact-item input {
+  width: 100%; padding: 7px 10px; border-radius: 7px; border: 1px solid var(--border);
+  font-size: 12px; background: var(--cream); font-family: inherit; outline: none; color: var(--ink);
+}
+.admin-contact-item input:focus { border-color: var(--gold); }
+.admin-success {
+  background: var(--moss-light); border: 1px solid rgba(74,103,65,0.4);
+  border-radius: 10px; padding: 12px; text-align: center;
+  font-size: 13px; font-weight: 600; color: #2D5023;
+  margin-top: 10px; display: none;
+}
+.admin-success.show { display: block; }
+
+/* 비번 화면 */
+.pw-screen { padding: 24px 20px; text-align: center; }
+.pw-icon { font-size: 48px; margin-bottom: 12px; }
+.pw-title { font-size: 18px; font-weight: 800; margin-bottom: 6px; color: var(--ink); font-family: 'Noto Serif KR', serif; }
+.pw-sub { font-size: 12px; color: var(--stone); margin-bottom: 20px; }
+.pw-input {
+  width: 100%; padding: 12px; border-radius: 10px;
+  border: 2px solid var(--border); font-size: 18px; text-align: center;
+  letter-spacing: 6px; outline: none; font-family: inherit;
+  margin-bottom: 10px; transition: all 0.15s; background: var(--card); color: var(--ink);
+}
+.pw-input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,146,42,0.12); }
+.pw-btn {
+  width: 100%; padding: 12px; border-radius: 10px;
+  background: linear-gradient(135deg, #4A2D08, #7A5218);
+  color: #FFE999; border: none; font-size: 14px; font-weight: 700;
+  cursor: pointer; font-family: inherit;
+}
+.pw-error { font-size: 12px; color: var(--red); margin-top: 8px; display: none; }
+.pw-error.show { display: block; }
+
+/* 학생명단 편집 */
+.student-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.student-input {
+  padding: 7px 9px; border-radius: 8px; border: 1.5px solid var(--border);
+  font-size: 12px; font-family: inherit; outline: none; background: var(--card);
+  width: 100%; transition: all 0.15s; color: var(--ink);
+}
+.student-input:focus { border-color: var(--gold); }
+.student-row-label {
+  font-size: 10px; color: var(--stone); text-align: center;
+  margin-bottom: 4px; font-weight: 600;
+}
+
+/* ======== STAMP RALLY ======== */
+.stamp-card {
+  background: var(--card); border-radius: 14px;
+  border: 2px solid var(--border); padding: 14px 10px;
+  text-align: center; transition: all 0.2s; position: relative;
+  box-shadow: var(--shadow);
+}
+.stamp-card.earned {
+  border-color: var(--gold);
+  background: linear-gradient(135deg, #FFFBEC, #FFF7D6);
+  box-shadow: 0 4px 16px rgba(200,146,42,0.2);
+}
+.stamp-icon {
+  font-size: 32px; margin-bottom: 6px;
+  filter: grayscale(1) opacity(0.3);
+  transition: all 0.3s;
+}
+.stamp-card.earned .stamp-icon { filter: none; }
+.stamp-name { font-size: 11px; font-weight: 700; color: var(--ink); margin-bottom: 2px; }
+.stamp-day { font-size: 10px; color: var(--stone); }
+.stamp-seal {
+  position: absolute; top: 6px; right: 6px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--gold); color: white; font-size: 13px;
+  display: none; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(200,146,42,0.4);
+}
+.stamp-card.earned .stamp-seal { display: flex; }
+.stamp-pts-badge {
+  display: inline-block; margin-top: 6px;
+  background: var(--primary-light); color: var(--primary-dark);
+  border-radius: 10px; padding: 2px 8px; font-size:10px; font-weight:700;
+}
+.stamp-card.earned .stamp-pts-badge {
+  background: var(--gold); color: white;
+}
+
+/* ======== SHARED GALLERY ======== */
+.gallery-filter {
+  padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  border: 1.5px solid var(--border); background: var(--card); color: var(--stone);
+  cursor: pointer; font-family: inherit; transition: all 0.15s;
+}
+.gallery-filter.active {
+  background: linear-gradient(135deg, #5C3A0A, #8B5E1A);
+  color: #FFE999; border-color: var(--gold);
+}
+.gallery-card {
+  border-radius: 12px; overflow: hidden; position: relative;
+  background: var(--card); border: 1px solid var(--border);
+  box-shadow: var(--shadow); cursor: pointer; transition: transform 0.15s;
+}
+.gallery-card:active { transform: scale(0.97); }
+.gallery-card img {
+  width: 100%; height: 130px; object-fit: cover; display: block;
+}
+.gallery-card-body { padding: 8px; }
+.gallery-card-name { font-size: 11px; font-weight: 700; color: var(--ink); }
+.gallery-card-caption { font-size: 10px; color: var(--stone); margin-top: 2px; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.gallery-card-time { font-size: 10px; color: rgba(122,110,95,0.6); margin-top: 4px; }
+.gallery-mine-badge {
+  position: absolute; top: 6px; right: 6px;
+  background: var(--gold); color: white; font-size: 9px; font-weight: 700;
+  padding: 2px 6px; border-radius: 8px;
+}
+.gallery-likes {
+  display: flex; align-items: center; gap: 3px;
+  font-size: 11px; color: var(--stone); margin-top: 4px; cursor: pointer;
+}
+.gallery-likes.liked { color: #E74C3C; }
+
+/* 업로드 버튼 */
+.photo-upload-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: linear-gradient(135deg, var(--primary-light), #FEF9E7);
+  border: 1.5px dashed rgba(139,94,26,0.35); border-radius: 12px;
+  padding: 16px; font-size: 13px; font-weight: 600; color: var(--primary);
+  cursor: pointer; margin-bottom: 10px; transition: all 0.15s;
+}
+.photo-upload-btn:active { opacity: 0.85; }
+@keyframes bounceIn {
+  0% { transform: scale(0.7); opacity: 0; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.random-mission-anim { animation: bounceIn 0.4s ease; }
+
+/* GPS 펄스 */
+@keyframes gpsPulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.5; }
+}
+.gps-active { background: #22C55E !important; animation: gpsPulse 1.4s ease-in-out infinite; }
+.gps-searching { background: var(--gold) !important; animation: gpsPulse 1s ease-in-out infinite; }
+.gps-error { background: var(--red) !important; }
+
+/* 스탬프 획득 축하 팝업 */
+.stamp-celebrate {
+  position: fixed; top: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 430px; z-index: 500;
+  padding: 0 20px;
+  pointer-events: none;
+}
+.stamp-celebrate-inner {
+  background: linear-gradient(135deg, #4A2D08, #8B5E1A);
+  color: #FFE999; border-radius: 0 0 20px 20px;
+  padding: 16px 20px; text-align: center;
+  box-shadow: 0 8px 30px rgba(93,58,10,0.4);
+  animation: slideDown 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
+}
+.stamp-celebrate-emoji { font-size: 36px; margin-bottom: 4px; }
+.stamp-celebrate-title { font-size: 16px; font-weight: 800; font-family: 'Noto Serif KR', serif; }
+.stamp-celebrate-sub { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== HEADER ===== -->
+  <div class="header">
+    <!-- 기와 지붕 상단 띠 -->
+    <div class="header-roof">
+      <div class="header-roof-pattern">
+        <div class="header-roof-tile"></div><div class="header-roof-tile"></div>
+        <div class="header-roof-tile"></div><div class="header-roof-tile"></div>
+        <div class="header-roof-tile"></div><div class="header-roof-tile"></div>
+        <div class="header-roof-tile"></div><div class="header-roof-tile"></div>
+      </div>
+      <button class="header-admin-btn" onclick="openAdminLogin()">⚙️ 관리자</button>
+    </div>
+    <div class="header-body">
+      <div class="header-row">
+        <div>
+          <div class="header-title" id="hdr-title">🏺 의령초 수학여행</div>
+          <div class="header-sub" id="hdr-sub">6학년 · 경주 역사탐방 · 미래 진로 탐색</div>
+          <div class="header-date"><i class="ti ti-calendar" style="font-size:12px"></i> <span id="hdr-date">2026.6.18(목) ~ 6.19(금) 1박 2일</span></div>
+        </div>
+        <div class="dday-badge">
+          <div class="dday-num" id="dday-num">?</div>
+          <div class="dday-label" id="dday-label">D-day</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== NAV ===== -->
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showSection('schedule',this)"><i class="ti ti-calendar-event"></i>일정표</button>
+    <button class="nav-btn" onclick="showSection('checklist',this)"><i class="ti ti-checklist"></i>준비물</button>
+    <button class="nav-btn" onclick="showSection('budget',this)"><i class="ti ti-coin"></i>용돈장</button>
+    <button class="nav-btn" onclick="showSection('mission',this)"><i class="ti ti-puzzle"></i>미션</button>
+    <button class="nav-btn" onclick="showSection('stamp',this)"><i class="ti ti-stamp"></i>스탬프</button>
+    <button class="nav-btn" onclick="showSection('photomission',this)"><i class="ti ti-camera-filled"></i>📸미션</button>
+    <button class="nav-btn" onclick="showSection('ranking',this)"><i class="ti ti-trophy"></i>랭킹</button>
+    <button class="nav-btn" onclick="showSection('photo',this)"><i class="ti ti-camera"></i>사진</button>
+    <button class="nav-btn" onclick="showSection('seating',this)"><i class="ti ti-armchair"></i>좌석/방</button>
+    <button class="nav-btn" onclick="showSection('guide',this)"><i class="ti ti-map-pin"></i>경주가이드</button>
+    <button class="nav-btn" onclick="showSection('notice',this)"><i class="ti ti-alert-circle"></i>주의사항</button>
+    <button class="nav-btn" onclick="showSection('emergency',this)"><i class="ti ti-phone"></i>비상연락</button>
+  </nav>
+
+  <div class="content">
+
+    <!-- ===== 일정표 ===== -->
+    <div id="section-schedule" class="section active">
+      <div class="day-tab-row">
+        <div class="day-tab active" id="daytab-1" onclick="showDay(1)">
+          <div>1일차</div><div class="day-sub" id="day1-label">6/18(목)</div>
+        </div>
+        <div class="day-tab" id="daytab-2" onclick="showDay(2)">
+          <div>2일차</div><div class="day-sub" id="day2-label">6/19(금)</div>
+        </div>
+      </div>
+      <div id="day1" class="timeline">
+        <div class="tl-item"><div class="tl-time">07:40</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-name">학교 집결 · 인원 파악 및 출발</div><span class="tl-badge badge-go">🚌 출발</span></div></div>
+        <div class="tl-item"><div class="tl-time">09:50</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-name">대릉원(천마총) 및 첨성대 관람</div><span class="tl-badge badge-sight">🏺 역사탐방</span></div></div>
+        <div class="tl-item"><div class="tl-time">11:30</div><div class="tl-dot activity"></div><div class="tl-content"><div class="tl-name">경주월드 자유 이용 <span style="font-size:10px;color:var(--text-muted)">(~18:00)</span></div><span class="tl-badge badge-activity">🎢 놀이공원</span></div></div>
+        <div class="tl-item"><div class="tl-time">12:00</div><div class="tl-dot meal"></div><div class="tl-content"><div class="tl-name">중식 — 경주월드 (캐시밴드)</div><span class="tl-badge badge-meal">🍽 점심</span></div></div>
+        <div class="tl-item"><div class="tl-time">18:10</div><div class="tl-dot meal"></div><div class="tl-content"><div class="tl-name">석식 — <span id="dinner-place">생등심돈까스 (아임맛)</span></div><span class="tl-badge badge-meal">🍽 저녁</span></div></div>
+        <div class="tl-item"><div class="tl-time">19:10</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-name">동궁과월지 야간 관람</div><span class="tl-badge badge-sight">✨ 야경</span></div></div>
+        <div class="tl-item"><div class="tl-time">20:20</div><div class="tl-dot stay"></div><div class="tl-content"><div class="tl-name">숙소 도착 — <span id="hotel-name-disp">경주 켄싱턴리조트</span></div><span class="tl-badge badge-stay">🏨 1실 4~5인</span></div></div>
+        <div class="tl-item"><div class="tl-time">22:00~</div><div class="tl-dot stay"></div><div class="tl-content"><div class="tl-name">취침 (핸드폰 사용 금지)</div><span class="tl-badge badge-stay">😴 취침</span></div></div>
+      </div>
+      <div id="day2" class="timeline" style="display:none">
+        <div class="tl-item"><div class="tl-time">07:00</div><div class="tl-dot meal"></div><div class="tl-content"><div class="tl-name">기상 · 세면 · 조식 (숙소식)</div><span class="tl-badge badge-meal">🍳 아침</span></div></div>
+        <div class="tl-item"><div class="tl-time">09:20</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-name">불국사 관람</div><span class="tl-badge badge-sight">🏺 역사탐방</span></div></div>
+        <div class="tl-item"><div class="tl-time">10:30</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-name">국립경주박물관 관람</div><span class="tl-badge badge-sight">🏺 역사탐방</span></div></div>
+        <div class="tl-item"><div class="tl-time">12:00</div><div class="tl-dot meal"></div><div class="tl-content"><div class="tl-name">중식 — <span id="lunch2-place">애슐리퀸즈 경주켄싱턴점</span></div><span class="tl-badge badge-meal">🍽 점심</span></div></div>
+        <div class="tl-item"><div class="tl-time">13:30</div><div class="tl-dot activity"></div><div class="tl-content"><div class="tl-name">황리단길 자유 관람</div><span class="tl-badge badge-activity">🛍 자유시간</span></div></div>
+        <div class="tl-item"><div class="tl-time">15:00</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-name">황리단길 출발 → 학교 귀환</div><span class="tl-badge badge-go">🏫 귀가</span></div></div>
+        <div class="tl-item"><div class="tl-time">16:50</div><div class="tl-dot"></div><div class="tl-content"><div class="tl-name">귀가지도 및 해산</div><span class="tl-badge badge-go">👋 해산</span></div></div>
+      </div>
+    </div>
+
+    <!-- ===== 준비물 ===== -->
+    <div id="section-checklist" class="section">
+      <div class="check-progress">
+        <div class="progress-text"><span id="check-text">0 / 16 완료</span><span id="check-pct">0%</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="check-bar" style="width:0%"></div></div>
+      </div>
+      <div class="card">
+        <div class="check-cat">📦 필수 지참물</div>
+        <div id="checklist-wrap">
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">학생증 또는 신분증</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">여벌 옷 (1~2벌)</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">세면도구 (칫솔·치약·수건)</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">속옷 및 양말 여벌</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">편한 운동화</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">비상약 (소화제·두통약)</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">물통 또는 음료수</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">우산 또는 우비</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">선크림</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">핸드폰 충전기 및 보조배터리</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">용돈 (캐시밴드 이용금액 포함)</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">마스크 여분</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">작은 가방 또는 크로스백</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">모자 또는 선글라스</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">간식 (과자·사탕 등)</div></div>
+          <div class="check-item" onclick="toggleCheck(this)"><div class="checkbox"></div><div class="check-label">비닐봉투 (세탁물용)</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 용돈 기입장 ===== -->
+    <div id="section-budget" class="section">
+      <div class="budget-display">
+        <div class="budget-label">남은 용돈</div>
+        <div class="budget-amount" id="budget-left">설정 필요</div>
+        <div class="budget-sub" id="budget-spent-label"></div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <div class="card-title"><i class="ti ti-settings" style="font-size:15px;color:var(--primary)"></i> 총 용돈 설정</div>
+        <div class="input-row">
+          <input type="number" id="budget-init" placeholder="총 용돈 (원)" />
+          <button class="btn-primary" onclick="setBudget()">설정</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-minus" style="font-size:15px;color:var(--red)"></i> 지출 기록</div>
+        <div class="input-row">
+          <input type="text" id="expense-name" placeholder="사용 내용" style="flex:1.5" />
+          <input type="number" id="expense-amt" placeholder="금액" style="flex:1" />
+          <button class="btn-primary" onclick="addExpense()">추가</button>
+        </div>
+        <div class="expense-list" id="expense-list">
+          <div class="empty-state">아직 지출 내역이 없어요 🌟</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 미션 ===== -->
+    <div id="section-mission" class="section">
+      <div class="mission-score">
+        <div class="mission-score-num" id="total-score">0점</div>
+        <div class="mission-score-label">내 총 미션 점수 · <span id="solved-count">0</span>문제 해결</div>
+      </div>
+
+      <div class="section-header"><i class="ti ti-map-pin" style="color:var(--primary)"></i> 방문지 퀴즈 미션</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <span style="background:#EDE9FE;color:#4C1D95;padding:2px 7px;border-radius:8px;font-weight:600">📝 퀴즈</span>
+        <span style="background:#FEF9C3;color:#78350F;padding:2px 7px;border-radius:8px;font-weight:600">🔍 수수께끼</span>
+        <span style="background:#D1FAE5;color:#065F46;padding:2px 7px;border-radius:8px;font-weight:600">🔤 초성</span>
+        <span style="background:#E0F2FE;color:#0C4A6E;padding:2px 7px;border-radius:8px;font-weight:600">📖 빈칸</span>
+        <span style="background:#FEE2E2;color:#991B1B;padding:2px 7px;border-radius:8px;font-weight:600">⭕ OX</span>
+      </div>
+
+      <div class="site-card" onclick="openMission('daereung')">
+        <div class="site-card-header">
+          <div class="site-icon" style="background:#FFF7ED">🏺</div>
+          <div style="flex:1">
+            <div class="site-name">대릉원 · 첨성대</div>
+            <div id="score-daereung" style="font-size:11px;color:var(--text-muted)">아직 도전 안 함</div>
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="site-desc">신라 왕들의 무덤과 천문대의 비밀을 풀어라! 수수께끼·초성·OX 포함</div>
+        <div class="site-meta"><span class="site-tag">1일차 09:50</span><span class="site-tag green">5문제</span><span class="site-tag purple">50점</span></div>
+      </div>
+
+      <div class="site-card" onclick="openMission('gyeongju')">
+        <div class="site-card-header">
+          <div class="site-icon" style="background:#FEF9C3">✨</div>
+          <div style="flex:1">
+            <div class="site-name">동궁과월지 야경</div>
+            <div id="score-gyeongju" style="font-size:11px;color:var(--text-muted)">아직 도전 안 함</div>
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="site-desc">통일신라 왕궁의 비밀과 밤의 경주를 탐험하라!</div>
+        <div class="site-meta"><span class="site-tag">1일차 19:10</span><span class="site-tag green">4문제</span><span class="site-tag purple">40점</span></div>
+      </div>
+
+      <div class="site-card" onclick="openMission('bulguksa')">
+        <div class="site-card-header">
+          <div class="site-icon" style="background:#E0F2FE">🛕</div>
+          <div style="flex:1">
+            <div class="site-name">불국사</div>
+            <div id="score-bulguksa" style="font-size:11px;color:var(--text-muted)">아직 도전 안 함</div>
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="site-desc">유네스코 세계문화유산의 비밀을 파헤쳐라! 빈칸채우기 포함</div>
+        <div class="site-meta"><span class="site-tag">2일차 09:20</span><span class="site-tag green">5문제</span><span class="site-tag purple">50점</span></div>
+      </div>
+
+      <div class="site-card" onclick="openMission('museum')">
+        <div class="site-card-header">
+          <div class="site-icon" style="background:#EDE9FE">🏛</div>
+          <div style="flex:1">
+            <div class="site-name">국립경주박물관</div>
+            <div id="score-museum" style="font-size:11px;color:var(--text-muted)">아직 도전 안 함</div>
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="site-desc">신라 천년의 유물을 발견하라! 에밀레종의 전설을 밝혀라!</div>
+        <div class="site-meta"><span class="site-tag">2일차 10:30</span><span class="site-tag green">4문제</span><span class="site-tag purple">40점</span></div>
+      </div>
+
+      <div class="site-card" onclick="openMission('hwangni')">
+        <div class="site-card-header">
+          <div class="site-icon" style="background:#D1FAE5">🛍</div>
+          <div style="flex:1">
+            <div class="site-name">황리단길</div>
+            <div id="score-hwangni" style="font-size:11px;color:var(--text-muted)">아직 도전 안 함</div>
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--text-muted)"></i>
+        </div>
+        <div class="site-desc">경주의 힙스터 골목! 수수께끼와 초성으로 맛집을 찾아라!</div>
+        <div class="site-meta"><span class="site-tag">2일차 13:30</span><span class="site-tag green">4문제</span><span class="site-tag purple">40점</span></div>
+      </div>
+
+      <!-- 랜덤 미션 뽑기 -->
+      <div class="section-header" style="margin-top:8px"><i class="ti ti-dice" style="color:var(--purple)"></i> 랜덤 미션 뽑기</div>
+      <div class="card" style="text-align:center;padding:20px 16px">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.6">버튼을 누르면 깜짝 미션이 나타나요!<br>친구들과 같이 도전해 보세요 🎲</div>
+        <button class="btn-primary" style="width:100%;padding:14px;font-size:15px;letter-spacing:0.5px" onclick="drawRandomMission()">
+          <i class="ti ti-dice" style="font-size:18px"></i> 미션 뽑기!
+        </button>
+        <div id="random-mission-result" style="display:none;margin-top:16px;background:linear-gradient(135deg,var(--purple-light),var(--gold-light));border-radius:14px;padding:16px;border:1.5px solid rgba(107,78,139,0.25)">
+          <div style="font-size:11px;font-weight:700;color:var(--purple);margin-bottom:6px;letter-spacing:0.5px">🎯 오늘의 깜짝 미션</div>
+          <div id="random-mission-text" style="font-size:14px;font-weight:700;color:var(--ink);line-height:1.6;margin-bottom:8px"></div>
+          <div id="random-mission-tip" style="font-size:11px;color:var(--stone);line-height:1.5"></div>
+          <div id="random-mission-pts" style="display:inline-block;margin-top:10px;background:var(--gold);color:white;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:700"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 스탬프 랠리 ===== -->
+    <div id="section-stamp" class="section">
+
+      <!-- 헤더 요약 -->
+      <div style="background:linear-gradient(135deg,#4A2D08,#8B5E1A);border-radius:14px;padding:16px;margin-bottom:14px;color:#FFF8E7;text-align:center">
+        <div style="font-size:22px;margin-bottom:4px">🏅 경주 스탬프 랠리</div>
+        <div style="font-size:12px;opacity:0.85">장소에 가까이 가면 도장이 자동으로 찍혀요!</div>
+        <div style="margin-top:12px;display:flex;justify-content:center;gap:16px">
+          <div><div style="font-size:26px;font-weight:800" id="stamp-count">0</div><div style="font-size:10px;opacity:0.8">획득한 도장</div></div>
+          <div style="width:1px;background:rgba(255,255,255,0.25)"></div>
+          <div><div style="font-size:26px;font-weight:800">8</div><div style="font-size:10px;opacity:0.8">전체 도장</div></div>
+          <div style="width:1px;background:rgba(255,255,255,0.25)"></div>
+          <div><div style="font-size:26px;font-weight:800" id="stamp-pts">0</div><div style="font-size:10px;opacity:0.8">점수</div></div>
+        </div>
+      </div>
+
+      <!-- GPS 상태 + 인증 버튼 -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-title"><i class="ti ti-map-pin" style="font-size:15px;color:var(--primary)"></i> 위치 인증</div>
+        <div id="stamp-gps-status" style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.6;display:flex;align-items:center;gap:6px">
+          <span id="stamp-gps-dot" style="width:9px;height:9px;border-radius:50%;background:#D1D5DB;flex-shrink:0;display:inline-block"></span>
+          <span id="stamp-gps-text">위치 확인 중... GPS 허용이 필요해요</span>
+        </div>
+        <div id="stamp-nearby-info" style="display:none;margin-bottom:10px;background:var(--primary-light);border-radius:10px;padding:10px 12px;border:1px solid rgba(139,94,26,0.2)">
+          <div style="font-size:11px;color:var(--stone);margin-bottom:2px">📍 현재 가장 가까운 장소</div>
+          <div id="stamp-nearby-name" style="font-size:15px;font-weight:800;color:var(--ink)"></div>
+          <div id="stamp-nearby-dist" style="font-size:11px;color:var(--stone);margin-top:2px"></div>
+        </div>
+        <button id="stamp-check-btn" class="btn-primary" style="width:100%;padding:13px;font-size:14px" onclick="checkLocationStamp()">
+          <i class="ti ti-map-pin" style="font-size:16px"></i> 지금 위치로 도장 받기
+        </button>
+        <div id="stamp-check-result" style="display:none;font-size:13px;font-weight:600;padding:10px 12px;border-radius:10px;margin-top:10px;text-align:center"></div>
+      </div>
+
+      <!-- 스탬프 카드 그리드 -->
+      <div class="section-header"><i class="ti ti-map" style="color:var(--primary)"></i> 방문지 스탬프</div>
+      <div id="stamp-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px"></div>
+
+      <!-- 완주 보너스 -->
+      <div class="card" style="background:linear-gradient(135deg,#FEF9C3,#FDF5E0);border:1.5px solid rgba(200,146,42,0.3)">
+        <div class="card-title"><i class="ti ti-gift" style="font-size:15px;color:var(--gold)"></i> 완주 보너스</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span>🥉 도장 4개 이상</span><span style="font-weight:700;color:var(--primary)">+20 보너스점</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border)">
+            <span>🥈 도장 6개 이상</span><span style="font-weight:700;color:var(--primary)">+50 보너스점</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:6px 0">
+            <span>🥇 도장 8개 전부!</span><span style="font-weight:700;color:var(--gold)">+100 보너스점 🎉</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 사진 미션 ===== -->
+    <div id="section-photomission" class="section">
+      <div class="photo-mission-progress">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:14px;font-weight:800">📸 포토 챌린지</div>
+          <div style="font-size:12px;font-weight:700;color:var(--primary)"><span id="pm-done">0</span>/<span id="pm-total">8</span> 완료</div>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="pm-bar" style="width:0%;background:var(--purple)"></div></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px">AI가 사진을 보고 미션 달성 여부를 판단해줘요! 📷✨</div>
+      </div>
+
+      <!-- 미션 카드들 -->
+      <div class="photo-mission-card" id="pm-card-0">
+        <div class="photo-mission-header">
+          <div class="photo-mission-icon" style="background:#FFF7ED">🏺</div>
+          <div style="flex:1">
+            <div class="photo-mission-title">천마총 앞에서 역사탐험가 포즈!</div>
+            <span class="photo-mission-pts">+20점</span>
+          </div>
+        </div>
+        <div class="photo-mission-desc">대릉원 천마총 입구에서 마치 고고학자처럼 진지한 탐험가 포즈를 취해보세요. 팔짱을 끼거나 손으로 턱을 괴는 포즈도 OK! 📸</div>
+        <label style="display:block">
+          <div class="photo-upload-zone" id="pm-zone-0">
+            <i class="ti ti-camera" style="font-size:24px;color:#9CA3AF"></i>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px">사진을 선택하세요</div>
+          </div>
+          <input type="file" accept="image/*" style="display:none" onchange="handlePMUpload(0,event)">
+        </label>
+        <img class="photo-preview" id="pm-preview-0">
+        <button class="ai-judge-btn" id="pm-btn-0" onclick="judgePhotoMission(0)" style="display:none">
+          <i class="ti ti-sparkles" style="font-size:14px"></i> AI로 미션 판정받기
+        </button>
+        <div class="ai-judge-result" id="pm-result-0"></div>
+      </div>
+
+      <div class="photo-mission-card" id="pm-card-1">
+        <div class="photo-mission-header">
+          <div class="photo-mission-icon" style="background:#FFF7ED">🔭</div>
+          <div style="flex:1">
+            <div class="photo-mission-title">첨성대와 같은 높이에서 찍기</div>
+            <span class="photo-mission-pts">+20점</span>
+          </div>
+        </div>
+        <div class="photo-mission-desc">첨성대가 배경에 보이도록, 첨성대와 비슷한 눈높이에서 찍어보세요. 앉거나 누워서 찍으면 더 멋진 사진이 완성됩니다!</div>
+        <label style="display:block">
+          <div class="photo-upload-zone" id="pm-zone-1">
+            <i class="ti ti-camera" style="font-size:24px;color:#9CA3AF"></i>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px">사진을 선택하세요</div>
+          </div>
+          <input type="file" accept="image/*" style="display:none" onchange="handlePMUpload(1,event)">
+        </label>
+        <img class="photo-preview" id="pm-preview-1">
+        <button class="ai-judge-btn" id="pm-btn-1" onclick="judgePhotoMission(1)" style="display:none">
+          <i class="ti ti-sparkles" style="font-size:14px"></i> AI로 미션 판정받기
+        </button>
+        <div class="ai-judge-result" id="pm-result-1"></div>
+      </div>
+
+      <div class="photo-mission-card" id="pm-card-2">
+        <div class="photo-mission-header">
+          <div class="photo-mission-icon" style="background:#FEF9C3">✨</div>
+          <div style="flex:1">
+            <div class="photo-mission-title">동궁과월지 야경 반영 사진</div>
+            <span class="photo-mission-pts">+25점</span>
+          </div>
+        </div>
+        <div class="photo-mission-desc">연못에 비친 건물 반영(Reflection)이 나오도록 찍어보세요! 서쪽 데크에서 찍으면 가장 예쁘게 나온다는 팁이 있어요 🌙</div>
+        <label style="display:block">
+          <div class="photo-upload-zone" id="pm-zone-2">
+            <i class="ti ti-camera" style="font-size:24px;color:#9CA3AF"></i>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px">사진을 선택하세요</div>
+          </div>
+          <input type="file" accept="image/*" style="display:none" onchange="handlePMUpload(2,event)">
+        </label>
+        <img class="photo-preview" id="pm-preview-2">
+        <button class="ai-judge-btn" id="pm-btn-2" onclick="judgePhotoMission(2)" style="display:none">
+          <i class="ti ti-sparkles" style="font-size:14px"></i> AI로 미션 판정받기
+        </button>
+        <div class="ai-judge-result" id="pm-result-2"></div>
+      </div>
+
+      <div class="photo-mission-card" id="pm-card-3">
+        <div class="photo-mission-header">
+          <div class="photo-mission-icon" style="background:#E0F2FE">🛕</div>
+          <div style="flex:1">
+            <div class="photo-mission-title">다보탑 vs 석가탑 나란히 찍기</div>
+            <span class="photo-mission-pts">+20점</span>
+          </div>
+        </div>
+        <div class="photo-mission-desc">불국사의 두 탑(다보탑·석가탑)이 한 프레임에 담기도록 찍어보세요. 두 탑의 차이를 직접 눈으로 비교해봐요!</div>
+        <label style="display:block">
+          <div class="photo-upload-zone" id="pm-zone-3">
+            <i class="ti ti-camera" style="font-size:24px;color:#9CA3AF"></i>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px">사진을 선택하세요</div>
+          </div>
+          <input type="file" accept="image/*" style="display:none" onchange="handlePMUpload(3,event)">
+        </label>
+        <img class="photo-preview" id="pm-preview-3">
+        <button class="ai-judge-btn" id="pm-btn-3" onclick="judgePhotoMission(3)" style="display:none">
+          <i class="ti ti-sparkles" style="font-size:14px"></i> AI로 미션 판정받기
+        </button>
+        <div class="ai-judge-result" id="pm-result-3"></div>
+      </div>
+
+      <div class="photo-mission-card" id="pm-card-4">
+        <div class="photo-mission-header">
+          <div class="photo-mission-icon" style="background:#EDE9FE">🏛</div>
+          <div style="flex:1">
+            <div class="photo-mission-title">에밀레종 앞에서 귀 기울이는 척!</div>
+            <span class="photo-mission-pts">+15점</span>
+          </div>
+        </div>
+        <div class="photo-mission-desc">박물관 성덕대왕신종(에밀레종) 앞에서 종소리를 듣는 척, 귀에 손을 대고 들으려는 포즈로 찍어보세요 🔔</div>
+        <label style="display:block">
+          <div class="photo-upload-zone" id="pm-zone-4">
+            <i class="ti ti-camera" style="font-size:24px;color:#9CA3AF"></i>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px">사진을 선택하세요</div>
+          </div>
+          <input type="file" accept="image/*" style="display:none" onchange="handlePMUpload(4,event)">
+        </label>
+        <img class="photo-preview" id="pm-preview-4">
+        <button class="ai-judge-btn" id="pm-btn-4" onclick="judgePhotoMission(4)" style="display:none">
+          <i class="ti ti-sparkles" style="font-size:14px"></i> AI로 미션 판정받기
+        </button>
+        <div class="ai-judge-result" id="pm-result-4"></div>
+      </div>
+
+      <div class="photo-mission-card" id="pm-card-5">
+        <div class="photo-mission-header">
+          <div class="photo-mission-icon" style="background:#D1FAE5">🛍</div>
+          <div style="flex:1">
+            <div class="photo-mission-title">황남빵 먹방 인증샷</div>
+            <span class="photo-mission-pts">+15점</span>
+          </div>
+        </div>
+        <div class="photo-mission-desc">황리단길에서 황남빵(또는 찰보리빵)을 사서 먹는 모습을 인증해보세요! 맛있는 표정이 포인트 😋</div>
+        <label style="display:block">
+          <div class="photo-upload-zone" id="pm-zone-5">
+            <i class="ti ti-camera" style="font-size:24px;color:#9CA3AF"></i>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px">사진을 선택하세요</div>
+          </div>
+          <input type="file" accept="image/*" style="display:none" onchange="handlePMUpload(5,event)">
+        </label>
+        <img class="photo-preview" id="pm-preview-5">
+        <button class="ai-judge-btn" id="pm-btn-5" onclick="judgePhotoMission(5)" style="display:none">
+          <i class="ti ti-sparkles" style="font-size:14px"></i> AI로 미션 판정받기
+        </button>
+        <div class="ai-judge-result" id="pm-result-5"></div>
+      </div>
+
+      <div class="photo-mission-card" id="pm-card-6">
+        <div class="photo-mission-header">
+          <div class="photo-mission-icon" style="background:#FEE2E2">🎢</div>
+          <div style="flex:1">
+            <div class="photo-mission-title">경주월드 놀이기구 탑승 인증</div>
+            <span class="photo-mission-pts">+15점</span>
+          </div>
+        </div>
+        <div class="photo-mission-desc">경주월드에서 놀이기구를 타는 중, 또는 탑승 전 설레는 모습을 찍어보세요! 친구들과 함께라면 더욱 좋아요 🎡</div>
+        <label style="display:block">
+          <div class="photo-upload-zone" id="pm-zone-6">
+            <i class="ti ti-camera" style="font-size:24px;color:#9CA3AF"></i>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px">사진을 선택하세요</div>
+          </div>
+          <input type="file" accept="image/*" style="display:none" onchange="handlePMUpload(6,event)">
+        </label>
+        <img class="photo-preview" id="pm-preview-6">
+        <button class="ai-judge-btn" id="pm-btn-6" onclick="judgePhotoMission(6)" style="display:none">
+          <i class="ti ti-sparkles" style="font-size:14px"></i> AI로 미션 판정받기
+        </button>
+        <div class="ai-judge-result" id="pm-result-6"></div>
+      </div>
+
+      <div class="photo-mission-card" id="pm-card-7">
+        <div class="photo-mission-header">
+          <div class="photo-mission-icon" style="background:#E0F2FE">🤝</div>
+          <div style="flex:1">
+            <div class="photo-mission-title">우리 모둠 단체사진</div>
+            <span class="photo-mission-pts">+25점</span>
+          </div>
+        </div>
+        <div class="photo-mission-desc">우리 모둠원 모두가 함께 찍은 단체사진! 경주의 명소를 배경으로 5명 이상이 함께 찍어야 해요. 다 같이 "경주!" 를 외쳐보세요 📸</div>
+        <label style="display:block">
+          <div class="photo-upload-zone" id="pm-zone-7">
+            <i class="ti ti-camera" style="font-size:24px;color:#9CA3AF"></i>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px">사진을 선택하세요</div>
+          </div>
+          <input type="file" accept="image/*" style="display:none" onchange="handlePMUpload(7,event)">
+        </label>
+        <img class="photo-preview" id="pm-preview-7">
+        <button class="ai-judge-btn" id="pm-btn-7" onclick="judgePhotoMission(7)" style="display:none">
+          <i class="ti ti-sparkles" style="font-size:14px"></i> AI로 미션 판정받기
+        </button>
+        <div class="ai-judge-result" id="pm-result-7"></div>
+      </div>
+    </div>
+
+    <!-- ===== 랭킹 ===== -->
+    <div id="section-ranking" class="section">
+      <div class="rank-input-form">
+        <div class="form-label">내 이름 등록 (랭킹 참여)</div>
+        <div class="input-row" style="margin-bottom:0">
+          <input type="text" id="rank-name-input" placeholder="이름 입력" />
+          <button class="btn-primary" onclick="registerRank()">등록</button>
+        </div>
+        <div id="rank-registered" style="font-size:11px;color:var(--primary-dark);margin-top:6px;display:none"></div>
+      </div>
+      <div class="tabs-small">
+        <button class="tab-s active" id="ranktab-all" onclick="switchRankTab('all')">🏆 전체 랭킹</button>
+        <button class="tab-s" id="ranktab-photo" onclick="switchRankTab('photo')">📸 포토 랭킹</button>
+      </div>
+      <div class="card">
+        <div id="ranking-list">
+          <div class="empty-state">미션을 풀어 점수를 획득하세요! 🏆</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn-primary" style="flex:1;font-size:12px" onclick="shareRanking('all')"><i class="ti ti-share" style="font-size:13px"></i> 전체랭킹 공유</button>
+        <button class="btn-primary" style="flex:1;font-size:12px;background:linear-gradient(135deg,#4A2D8B,#6B4E8B)" onclick="shareRanking('photo')"><i class="ti ti-share" style="font-size:13px"></i> 포토랭킹 공유</button>
+      </div>
+      <div id="share-result" style="display:none;background:var(--moss-light);border:1px solid rgba(74,103,65,0.3);border-radius:10px;padding:12px;font-size:12px;color:#2D5023;margin-bottom:12px;white-space:pre-wrap;word-break:break-all"></div>
+    </div>
+
+    <!-- ===== 사진 ===== -->
+    <div id="section-photo" class="section">
+
+      <!-- 탭: 내 사진 / 공유 갤러리 -->
+      <div class="tabs-small" style="margin-bottom:12px">
+        <button class="tab-s active" id="phototab-mine" onclick="switchPhotoTab('mine')">📷 내 사진</button>
+        <button class="tab-s" id="phototab-shared" onclick="switchPhotoTab('shared')">🌍 공유 갤러리</button>
+      </div>
+
+      <!-- ── 내 사진 패널 ── -->
+      <div id="photo-panel-mine">
+        <div class="card" style="margin-bottom:10px">
+          <div class="card-title"><i class="ti ti-info-circle" style="font-size:15px;color:var(--accent)"></i> 안내</div>
+          <div style="font-size:12px;color:var(--text-muted);line-height:1.6">사진을 올리고 AI 설명을 생성하거나, 🌍 공유 갤러리에 업로드해서 친구들과 함께 봐요!</div>
+        </div>
+        <label style="display:block">
+          <div class="photo-upload-btn"><i class="ti ti-camera-plus" style="font-size:20px"></i> 사진 추가하기</div>
+          <input type="file" id="photo-input" accept="image/*" multiple style="display:none" onchange="handlePhotoUpload(event)">
+        </label>
+        <div class="photo-grid" id="photo-grid"></div>
+        <div class="empty-state" id="photo-empty">아직 사진이 없어요. 여행지에서 찍은 사진을 올려보세요! 📸</div>
+      </div>
+
+      <!-- ── 공유 갤러리 패널 ── -->
+      <div id="photo-panel-shared" style="display:none">
+
+        <!-- Firebase 연결 상태 -->
+        <div id="gallery-status" style="display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--stone)">
+          <span id="gallery-status-dot" style="width:9px;height:9px;border-radius:50%;background:#D1D5DB;flex-shrink:0"></span>
+          <span id="gallery-status-text">Firebase 연결 중...</span>
+        </div>
+
+        <!-- 업로드 -->
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title"><i class="ti ti-cloud-upload" style="font-size:15px;color:var(--accent)"></i> 갤러리에 올리기</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">사진과 간단한 설명을 입력해서 친구들과 공유해요!</div>
+          <label style="display:block;margin-bottom:8px">
+            <div class="photo-upload-btn" style="background:linear-gradient(135deg,var(--accent-light),#D0E8F8);color:var(--accent);border:1.5px dashed rgba(61,107,142,0.4)">
+              <i class="ti ti-photo-plus" style="font-size:20px"></i> 공유할 사진 선택
+            </div>
+            <input type="file" id="gallery-upload-input" accept="image/*" style="display:none" onchange="handleGallerySelect(event)">
+          </label>
+          <img id="gallery-preview" style="display:none;width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-bottom:8px">
+          <input type="text" id="gallery-caption-input" placeholder="사진 설명 (선택사항)" style="width:100%;padding:9px 11px;border-radius:9px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--card);color:var(--ink);margin-bottom:8px">
+          <button id="gallery-upload-btn" class="btn-primary" style="width:100%;padding:12px;font-size:13px;display:none" onclick="uploadToGallery()">
+            <i class="ti ti-cloud-upload" style="font-size:15px"></i> 갤러리에 올리기
+          </button>
+          <div id="gallery-upload-progress" style="display:none;margin-top:8px">
+            <div style="height:6px;background:#E5DDD0;border-radius:4px;overflow:hidden">
+              <div id="gallery-progress-bar" style="height:100%;background:linear-gradient(90deg,var(--accent),#5B9BD5);border-radius:4px;width:0%;transition:width 0.3s"></div>
+            </div>
+            <div id="gallery-progress-text" style="font-size:11px;color:var(--stone);margin-top:4px;text-align:center">업로드 중...</div>
+          </div>
+        </div>
+
+        <!-- 갤러리 필터 + 새로고침 -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="section-header" style="margin-bottom:0;border-bottom:none;padding-bottom:0">
+            <i class="ti ti-photo" style="color:var(--primary)"></i> 친구들 사진
+            <span id="gallery-count" style="font-size:11px;color:var(--stone);font-weight:400;margin-left:4px"></span>
+          </div>
+          <button onclick="loadGallery()" style="background:var(--primary-light);border:1px solid rgba(139,94,26,0.2);color:var(--primary);border-radius:8px;padding:5px 10px;font-size:11px;cursor:pointer;font-family:inherit;font-weight:600;display:flex;align-items:center;gap:4px">
+            <i class="ti ti-refresh" style="font-size:13px"></i> 새로고침
+          </button>
+        </div>
+
+        <!-- 사진 정렬 필터 -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+          <button class="gallery-filter active" id="gf-all" onclick="setGalleryFilter('all',this)">전체</button>
+          <button class="gallery-filter" id="gf-mission" onclick="setGalleryFilter('mission',this)">📸 포토챌린지</button>
+          <button class="gallery-filter" id="gf-mine" onclick="setGalleryFilter('mine',this)">내 사진</button>
+        </div>
+
+        <div id="gallery-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px"></div>
+        <div id="gallery-empty" style="display:none" class="empty-state">아직 공유된 사진이 없어요. 첫 번째로 올려보세요! 📸</div>
+        <div id="gallery-loading" style="text-align:center;padding:30px;color:var(--stone);font-size:13px">
+          <div class="spinner" style="border-top-color:var(--primary);border-color:rgba(139,94,26,0.2);margin:0 auto 8px"></div>
+          갤러리 불러오는 중...
+        </div>
+      </div>
+    </div>
+
+    <!-- 사진 전체화면 모달 -->
+    <div id="photo-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:400;flex-direction:column;align-items:center;justify-content:center" onclick="closePhotoModal(event)">
+      <button onclick="closePhotoModal()" style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.15);border:none;color:white;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center">✕</button>
+      <img id="photo-modal-img" style="max-width:96%;max-height:75vh;object-fit:contain;border-radius:10px">
+      <div id="photo-modal-caption" style="color:white;font-size:13px;margin-top:12px;text-align:center;max-width:90%;opacity:0.9;line-height:1.5"></div>
+      <div id="photo-modal-meta" style="color:rgba(255,255,255,0.55);font-size:11px;margin-top:6px"></div>
+      <button id="photo-modal-delete" style="display:none;margin-top:14px;background:#B94040;border:none;color:white;border-radius:10px;padding:8px 20px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600" onclick="deleteGalleryPhoto()">
+        <i class="ti ti-trash" style="font-size:13px"></i> 삭제
+      </button>
+    </div>
+
+    <!-- ===== 좌석/방 ===== -->
+    <div id="section-seating" class="section">
+      <div class="tabs-small">
+        <button class="tab-s active" id="seattab-bus" onclick="switchSeatTab('bus')">🚌 버스 좌석</button>
+        <button class="tab-s" id="seattab-room" onclick="switchSeatTab('room')">🏨 방 배정</button>
+      </div>
+      <div id="seat-bus">
+        <div class="card" style="margin-bottom:8px">
+          <div class="card-title"><i class="ti ti-info-circle" style="font-size:14px;color:var(--accent)"></i> 이름을 탭해서 내 자리 찾기</div>
+          <div style="font-size:11px;color:var(--text-muted)">주황색 = 내 자리</div>
+        </div>
+        <div class="bus-front">🚌 앞 (운전석)</div>
+        <div id="bus-grid" style="background:white;border-radius:12px;border:1px solid var(--border);padding:12px"></div>
+        <div style="display:flex;gap:8px;margin-top:8px;font-size:11px;color:var(--text-muted);flex-wrap:wrap">
+          <span>🟠 내 자리</span><span style="color:#9CA3AF">⬜ 배정 전</span>
+        </div>
+      </div>
+      <div id="seat-room" style="display:none">
+        <div class="section-header" style="margin-bottom:10px">🏨 <span id="hotel-name-room">경주 켄싱턴리조트</span> 방 배정</div>
+        <div class="room-grid" id="room-grid"></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px;text-align:center">* 최종 배정은 선생님 확인 후 공지됩니다</div>
+      </div>
+    </div>
+
+    <!-- ===== 경주 가이드 ===== -->
+    <div id="section-guide" class="section">
+      <div class="section-header"><i class="ti ti-map-pin" style="color:var(--primary)"></i> 경주 명소 가이드</div>
+      <div class="guide-item">
+        <div class="guide-thumb" id="gthumb-daereung">
+          <div class="guide-thumb-fallback" style="background:#FFF7ED">🏺</div>
+        </div>
+        <div class="guide-body"><div class="guide-name">대릉원 (천마총)</div><div class="guide-desc">신라 왕과 귀족들의 무덤이 모여 있는 대규모 고분군. 천마총은 내부 관람이 가능하며, 금관·천마도 등 화려한 부장품이 발굴된 곳입니다.</div><div class="guide-tip">💡 팁: 무덤 안에 들어가면 서늘해요! 얇은 겉옷 챙기기. 기념 스탬프 꼭 찍기.</div><a class="guide-map-btn" href="https://map.naver.com/v5/search/대릉원" target="_blank"><i class="ti ti-map-2" style="font-size:14px"></i> 네이버 지도</a></div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-thumb" id="gthumb-cheom">
+          <div class="guide-thumb-fallback" style="background:#FFF7ED">🔭</div>
+        </div>
+        <div class="guide-body"><div class="guide-name">첨성대</div><div class="guide-desc">7세기 신라 선덕여왕 때 세워진 동양에서 가장 오래된 천문대. 362개의 돌로 쌓인 독특한 원통형 구조물로 유네스코 세계문화유산입니다.</div><div class="guide-tip">💡 팁: 362개 돌의 의미(1년 364일+꼭대기 2단)를 기억해두면 미션에 도움이 됩니다!</div><a class="guide-map-btn" href="https://map.naver.com/v5/search/경주 첨성대" target="_blank"><i class="ti ti-map-2" style="font-size:14px"></i> 네이버 지도</a></div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-thumb" id="gthumb-kjworld">
+          <div class="guide-thumb-fallback" style="background:#E0F2FE">🎢</div>
+        </div>
+        <div class="guide-body"><div class="guide-name">경주월드</div><div class="guide-desc">경주에 위치한 종합 놀이공원. 캐시밴드로 결제하며 자유롭게 이용할 수 있습니다. 파파이스 파도타기, 독수리 요새 등이 인기!</div><div class="guide-tip">💡 팁: 물놀이 기구 탈 경우 여벌 옷 필수! 캐시밴드 잔액은 귀가 후 환불 가능.</div><a class="guide-map-btn" href="https://map.naver.com/v5/search/경주월드" target="_blank"><i class="ti ti-map-2" style="font-size:14px"></i> 네이버 지도</a></div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-thumb" id="gthumb-dongung">
+          <div class="guide-thumb-fallback" style="background:#FEF9C3">✨</div>
+        </div>
+        <div class="guide-body"><div class="guide-name">동궁과 월지 (안압지)</div><div class="guide-desc">통일신라 시대 왕궁의 별궁터. 야간에 연못에 비친 건물 조명이 황홀해 '경주 야경 1번지'로 불립니다.</div><div class="guide-tip">💡 팁: 야간 반영 사진은 연못 서쪽 데크에서 찍어야 가장 예쁘게 나와요!</div><a class="guide-map-btn" href="https://map.naver.com/v5/search/동궁과월지" target="_blank"><i class="ti ti-map-2" style="font-size:14px"></i> 네이버 지도</a></div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-thumb" id="gthumb-bulguk">
+          <div class="guide-thumb-fallback" style="background:#E0F2FE">🛕</div>
+        </div>
+        <div class="guide-body"><div class="guide-name">불국사</div><div class="guide-desc">신라 경덕왕 때 창건된 불교 사찰. 다보탑·석가탑 등 국보급 문화재가 가득하며 유네스코 세계문화유산에 등재되어 있습니다.</div><div class="guide-tip">💡 팁: 다보탑과 석가탑의 차이를 구분해 보세요. (다보탑=화려, 석가탑=단순·우아)</div><a class="guide-map-btn" href="https://map.naver.com/v5/search/경주 불국사" target="_blank"><i class="ti ti-map-2" style="font-size:14px"></i> 네이버 지도</a></div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-thumb" id="gthumb-museum">
+          <div class="guide-thumb-fallback" style="background:#EDE9FE">🏛</div>
+        </div>
+        <div class="guide-body"><div class="guide-name">국립경주박물관</div><div class="guide-desc">신라 유물 3만여 점을 소장한 국립박물관. 성덕대왕신종(에밀레종), 금관 등 국보급 유물을 실물로 만날 수 있습니다.</div><div class="guide-tip">💡 팁: 에밀레종의 전설을 미리 알고 가면 더 감동적! 오디오 가이드도 활용해보세요.</div><a class="guide-map-btn" href="https://map.naver.com/v5/search/국립경주박물관" target="_blank"><i class="ti ti-map-2" style="font-size:14px"></i> 네이버 지도</a></div>
+      </div>
+      <div class="guide-item">
+        <div class="guide-thumb" id="gthumb-hwangni">
+          <div class="guide-thumb-fallback" style="background:#D1FAE5">🛍</div>
+        </div>
+        <div class="guide-body"><div class="guide-name">황리단길</div><div class="guide-desc">경주 황남동 일대의 개성 넘치는 카페·맛집·기념품 골목. 한옥과 현대가 어우러진 경주판 '경리단길'로 MZ세대에게 핫한 곳!</div><div class="guide-tip">💡 팁: 경주 찰보리빵, 황남빵은 꼭 사가세요! 줄 서는 곳이 맛집입니다.</div><a class="guide-map-btn" href="https://map.naver.com/v5/search/황리단길" target="_blank"><i class="ti ti-map-2" style="font-size:14px"></i> 네이버 지도</a></div>
+      </div>
+    </div>
+
+    <!-- ===== 주의사항 ===== -->
+    <div id="section-notice" class="section">
+      <div class="card">
+        <div class="card-title"><i class="ti ti-shield-check" style="font-size:15px;color:var(--primary)"></i> 안전 수칙</div>
+        <div class="notice-item"><div class="notice-num">1</div><div class="notice-text">이동 시 항상 모둠별로 행동하고, 절대 혼자 이탈하지 않습니다.</div></div>
+        <div class="notice-item"><div class="notice-num">2</div><div class="notice-text">선생님 사전 허락 없이 지정 장소를 벗어나지 않습니다.</div></div>
+        <div class="notice-item"><div class="notice-num">3</div><div class="notice-text">응급 상황 발생 시 즉시 담임 선생님 또는 인솔 교사에게 알립니다.</div></div>
+        <div class="notice-item"><div class="notice-num">4</div><div class="notice-text">버스 탑승 시 안전벨트를 반드시 착용합니다.</div></div>
+        <div class="notice-item"><div class="notice-num">5</div><div class="notice-text">놀이기구 탑승 시 안전 수칙을 준수하고 안전바를 확인합니다.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-device-mobile" style="font-size:15px;color:var(--accent)"></i> 핸드폰 사용</div>
+        <div class="notice-item"><div class="notice-num">1</div><div class="notice-text">취침 시간(22:00~) 이후에는 핸드폰을 사용하지 않습니다.</div></div>
+        <div class="notice-item"><div class="notice-num">2</div><div class="notice-text">수업·안내 시간 중에는 가방에 넣어 둡니다.</div></div>
+        <div class="notice-item"><div class="notice-num">3</div><div class="notice-text">타인 동의 없이 사진·영상 촬영 또는 SNS 게시를 하지 않습니다.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="ti ti-moneybag" style="font-size:15px;color:var(--green)"></i> 용돈·결제</div>
+        <div class="notice-item"><div class="notice-num">1</div><div class="notice-text">경주월드는 캐시밴드로 결제합니다. 현금·카드 불필요.</div></div>
+        <div class="notice-item"><div class="notice-num">2</div><div class="notice-text">귀중품 분실 방지를 위해 항상 몸에 지닙니다.</div></div>
+        <div class="notice-item"><div class="notice-num">3</div><div class="notice-text">캐시밴드 잔액은 귀가 후 환불 가능합니다.</div></div>
+      </div>
+    </div>
+
+    <!-- ===== 비상 연락망 ===== -->
+    <div id="section-emergency" class="section">
+      <div class="section-header">학교 연락처</div>
+      <a class="contact-btn" id="contact-teacher1-btn" href="tel:010-0000-0000">
+        <div class="contact-icon t"><i class="ti ti-user"></i></div>
+        <div><div class="contact-name">1반 담임 선생님</div><div class="contact-num" id="contact-teacher1-num">가정통신문 참고</div></div>
+        <i class="ti ti-phone-call contact-call"></i>
+      </a>
+      <a class="contact-btn" id="contact-teacher2-btn" href="tel:010-0000-0001">
+        <div class="contact-icon t"><i class="ti ti-user"></i></div>
+        <div><div class="contact-name">2반 담임 선생님</div><div class="contact-num" id="contact-teacher2-num">가정통신문 참고</div></div>
+        <i class="ti ti-phone-call contact-call"></i>
+      </a>
+      <a class="contact-btn" id="contact-principal-btn" href="tel:010-0000-0002">
+        <div class="contact-icon a" style="background:#F3E8FF;color:#7C3AED"><i class="ti ti-crown"></i></div>
+        <div><div class="contact-name">교장 선생님</div><div class="contact-num" id="contact-principal-num">가정통신문 참고</div></div>
+        <i class="ti ti-phone-call contact-call"></i>
+      </a>
+      <a class="contact-btn" id="contact-subject-btn" href="tel:010-0000-0003">
+        <div class="contact-icon a" style="background:#D1FAE5;color:#065F46"><i class="ti ti-book"></i></div>
+        <div><div class="contact-name">전담 선생님 (인솔)</div><div class="contact-num" id="contact-subject-num">가정통신문 참고</div></div>
+        <i class="ti ti-phone-call contact-call"></i>
+      </a>
+      <a class="contact-btn" id="contact-school-btn" href="tel:055-573-0000">
+        <div class="contact-icon a"><i class="ti ti-building-school"></i></div>
+        <div><div class="contact-name">의령초등학교 교무실</div><div class="contact-num" id="contact-school-num">055-573-XXXX</div></div>
+        <i class="ti ti-phone-call contact-call"></i>
+      </a>
+      <div class="section-header" style="margin-top:12px">응급 기관</div>
+      <a class="contact-btn" href="tel:119"><div class="contact-icon e"><i class="ti ti-ambulance"></i></div><div><div class="contact-name">119 소방·구급</div><div class="contact-num">화재·응급환자</div></div><i class="ti ti-phone-call contact-call"></i></a>
+      <a class="contact-btn" href="tel:112"><div class="contact-icon e"><i class="ti ti-shield"></i></div><div><div class="contact-name">112 경찰</div><div class="contact-num">범죄·위험상황</div></div><i class="ti ti-phone-call contact-call"></i></a>
+      <a class="contact-btn" href="tel:1339"><div class="contact-icon e"><i class="ti ti-heart-rate-monitor"></i></div><div><div class="contact-name">1339 응급의료정보</div><div class="contact-num">의료상담</div></div><i class="ti ti-phone-call contact-call"></i></a>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<!-- ===== MISSION MODAL ===== -->
+<div class="mission-modal" id="mission-modal" onclick="closeMissionOnBg(event)">
+  <div class="mission-sheet">
+    <div class="mission-sheet-header">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-subtitle" id="modal-subtitle"></div>
+    </div>
+    <div class="mission-sheet-body">
+      <div id="modal-body"></div>
+      <button class="btn-primary" style="width:100%;margin-top:8px" onclick="closeMission()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN MODAL ===== -->
+<div class="admin-modal" id="admin-modal">
+  <div class="admin-sheet">
+    <div class="admin-header">
+      <div>
+        <div class="admin-header-title">⚙️ 관리자 페이지</div>
+        <div class="admin-header-sub">의령초 6학년 수학여행 · 교사 전용</div>
+      </div>
+      <button class="admin-close" onclick="closeAdmin()">✕</button>
+    </div>
+    <div id="admin-pw-screen" class="pw-screen">
+      <div class="pw-icon">🔐</div>
+      <div class="pw-title">교사 인증</div>
+      <div class="pw-sub">관리자 비밀번호를 입력하세요</div>
+      <input type="password" class="pw-input" id="pw-input" placeholder="• • • •" maxlength="6" onkeyup="if(event.key==='Enter')checkPW()">
+      <button class="pw-btn" onclick="checkPW()">확인</button>
+      <div class="pw-error" id="pw-error">❌ 비밀번호가 틀렸습니다</div>
+    </div>
+    <div id="admin-main" style="display:none">
+      <div class="admin-body">
+        <div class="admin-tab-row">
+          <button class="admin-tab active" id="atab-basic" onclick="switchAdminTab('basic')">기본정보</button>
+          <button class="admin-tab" id="atab-contact" onclick="switchAdminTab('contact')">연락처</button>
+          <button class="admin-tab" id="atab-students" onclick="switchAdminTab('students')">학생명단</button>
+        </div>
+
+        <!-- 기본정보 탭 -->
+        <div id="admin-tab-basic">
+          <div class="admin-section">
+            <div class="admin-section-title"><i class="ti ti-calendar" style="font-size:13px"></i> 여행 기본 정보</div>
+            <div class="admin-field"><label>앱 제목</label><input type="text" id="a-title" value="🎒 의령초 수학여행"></div>
+            <div class="admin-field"><label>부제 (헤더 소개)</label><input type="text" id="a-sub" value="6학년 · 경주 역사탐방 · 미래 진로 탐색"></div>
+            <div class="admin-field"><label>여행 날짜 표시</label><input type="text" id="a-date" value="2026.6.18(목) ~ 6.19(금) 1박 2일"></div>
+            <div class="admin-field"><label>D-Day 기준일 (YYYY-MM-DD)</label><input type="date" id="a-dday" value="2026-06-18"></div>
+          </div>
+          <div class="admin-section">
+            <div class="admin-section-title"><i class="ti ti-building" style="font-size:13px"></i> 숙소 · 식사</div>
+            <div class="admin-field"><label>숙소 이름</label><input type="text" id="a-hotel" value="경주 켄싱턴리조트"></div>
+            <div class="admin-field"><label>1일차 저녁 식당</label><input type="text" id="a-dinner" value="생등심돈까스 (아임맛)"></div>
+            <div class="admin-field"><label>2일차 점심 식당</label><input type="text" id="a-lunch2" value="애슐리퀸즈 경주켄싱턴점"></div>
+          </div>
+          <div class="admin-section">
+            <div class="admin-section-title"><i class="ti ti-info-circle" style="font-size:13px"></i> 여행 정보 (주의사항 탭)</div>
+            <div class="admin-field"><label>테마</label><input type="text" id="a-theme" value="역사탐방 · 미래 진로 탐색"></div>
+          </div>
+          <button class="admin-save-btn" onclick="saveBasicInfo()"><i class="ti ti-device-floppy" style="font-size:16px"></i> 저장하기</button>
+          <div class="admin-success" id="basic-success">✅ 기본 정보가 저장되었습니다!</div>
+        </div>
+
+        <!-- 연락처 탭 -->
+        <div id="admin-tab-contact" style="display:none">
+          <div class="admin-section">
+            <div class="admin-section-title"><i class="ti ti-phone" style="font-size:13px"></i> 담임 선생님</div>
+            <div class="admin-contact-item">
+              <label>1반 담임 선생님 전화번호</label>
+              <input type="tel" id="a-teacher1-num" placeholder="010-0000-0000" value="">
+            </div>
+            <div class="admin-contact-item">
+              <label>2반 담임 선생님 전화번호</label>
+              <input type="tel" id="a-teacher2-num" placeholder="010-0000-0000" value="">
+            </div>
+          </div>
+          <div class="admin-section">
+            <div class="admin-section-title"><i class="ti ti-phone" style="font-size:13px"></i> 그 외 연락처</div>
+            <div class="admin-contact-item">
+              <label>교장 선생님 전화번호</label>
+              <input type="tel" id="a-principal-num" placeholder="010-0000-0000" value="">
+            </div>
+            <div class="admin-contact-item">
+              <label>전담 선생님 전화번호 (인솔)</label>
+              <input type="tel" id="a-subject-num" placeholder="010-0000-0000" value="">
+            </div>
+            <div class="admin-contact-item">
+              <label>교무실 전화번호</label>
+              <input type="tel" id="a-school-num" placeholder="055-573-XXXX" value="055-573-XXXX">
+            </div>
+          </div>
+          <button class="admin-save-btn" onclick="saveContacts()"><i class="ti ti-device-floppy" style="font-size:16px"></i> 저장하기</button>
+          <div class="admin-success" id="contact-success">✅ 연락처가 저장되었습니다!</div>
+        </div>
+
+        <!-- 학생명단 탭 -->
+        <div id="admin-tab-students" style="display:none">
+          <div class="admin-section">
+            <div class="admin-section-title"><i class="ti ti-users" style="font-size:13px"></i> 학생 명단 (1반 · 2반 각 20명)</div>
+            <div class="admin-tab-row" style="margin-bottom:10px">
+              <button class="admin-tab active" id="classtab-1" onclick="switchClassTab(1)" style="font-size:12px">1반</button>
+              <button class="admin-tab" id="classtab-2" onclick="switchClassTab(2)" style="font-size:12px">2반</button>
+            </div>
+            <div id="class1-editor"></div>
+            <div id="class2-editor" style="display:none"></div>
+          </div>
+          <div class="admin-section" style="margin-top:16px">
+            <div class="admin-section-title"><i class="ti ti-door" style="font-size:13px"></i> 방 배정 관리</div>
+            <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+              <label style="font-size:11px;color:var(--stone);white-space:nowrap">방 갯수:</label>
+              <input type="number" id="room-count-input" min="1" max="20" value="6" style="width:70px;padding:6px 8px;border-radius:7px;border:1.5px solid var(--border);font-size:13px;font-family:inherit;outline:none;background:var(--card);color:var(--ink)">
+              <button class="btn-primary" style="font-size:11px;padding:6px 12px" onclick="adjustRoomCount()">방 갯수 적용</button>
+            </div>
+            <div id="room-editor"></div>
+          </div>
+          <div class="admin-section" style="margin-top:16px">
+            <div class="admin-section-title"><i class="ti ti-armchair" style="font-size:13px"></i> 버스 좌석 배정 (4열 기준)</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">왼쪽 2열 | 오른쪽 2열 순서로 입력하세요</div>
+            <div id="seat-editor"></div>
+          </div>
+          <button class="admin-save-btn" onclick="saveStudents()"><i class="ti ti-device-floppy" style="font-size:16px"></i> 저장하기</button>
+          <div class="admin-success" id="students-success">✅ 학생 명단이 저장되었습니다!</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ======== DATA (변경 가능) ========
+let appData = {
+  title: '🎒 의령초 수학여행',
+  sub: '6학년 · 경주 역사탐방 · 미래 진로 탐색',
+  date: '2026.6.18(목) ~ 6.19(금) 1박 2일',
+  dday: '2026-06-18',
+  hotel: '경주 켄싱턴리조트',
+  dinner: '생등심돈까스 (아임맛)',
+  lunch2: '애슐리퀸즈 경주켄싱턴점',
+  theme: '역사탐방 · 미래 진로 탐색',
+  teacher1Num: '',
+  teacher2Num: '',
+  principalNum: '',
+  subjectNum: '',
+  schoolNum: '055-573-XXXX',
+};
+
+let seatNames = [
+  ['','김민준','이서연','','박지호','최유나'],
+  ['이준혁','강서현','윤민서','','조현우','한다은'],
+  ['정태양','신예린','오성민','','임나영','권도현'],
+  ['백수빈','류민재','허지민','','남기은','송재원'],
+  ['전유진','문현준','양채원','','노민석','고은비'],
+  ['','','','','',''],
+  ['','','','','','']
+];
+
+// 1반 2반 학생 명단 (각 20명)
+let class1Students = Array(20).fill('');
+let class2Students = Array(20).fill('');
+
+// 초기 샘플 데이터
+class1Students = ['김민준','이서연','박지호','최유나','이준혁','강서현','윤민서','조현우','한다은','정태양','신예린','오성민','임나영','권도현','백수빈','류민재','허지민','남기은','송재원','한소희'];
+class2Students = ['전유진','문현준','양채원','노민석','고은비','김지우','이하은','박도현','최서준','정민아','강지현','윤성호','조예린','한민준','임서현','권태양','남지호','송은서','노예나','고민재'];
+
+let rooms = [
+  { num:'101호', members:['김민준','이서연','박지호','최유나'] },
+  { num:'102호', members:['이준혁','강서현','윤민서','조현우'] },
+  { num:'103호', members:['정태양','신예린','오성민','임나영'] },
+  { num:'104호', members:['백수빈','류민재','허지민','남기은'] },
+  { num:'105호', members:['전유진','문현준','양채원','노민석'] },
+  { num:'교사실', members:['담임 선생님','교장 선생님','전담 선생님'] },
+];
+
+// ======== NAV ========
+function showSection(name, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ======== SCHEDULE ========
+function showDay(n) {
+  document.getElementById('day1').style.display = n===1 ? 'block' : 'none';
+  document.getElementById('day2').style.display = n===2 ? 'block' : 'none';
+  document.getElementById('daytab-1').className = 'day-tab' + (n===1?' active':'');
+  document.getElementById('daytab-2').className = 'day-tab' + (n===2?' active':'');
+}
+
+// ======== D-DAY ========
+function updateDday() {
+  const target = new Date(appData.dday + 'T07:40:00');
+  const now = new Date();
+  const diff = Math.ceil((target - now) / (1000*60*60*24));
+  const numEl = document.getElementById('dday-num');
+  const lblEl = document.getElementById('dday-label');
+  if (diff > 0) { numEl.textContent = 'D-' + diff; lblEl.textContent = '수학여행까지'; }
+  else if (diff === 0) { numEl.textContent = 'D-Day'; lblEl.textContent = '오늘 출발! 🎉'; }
+  else { numEl.textContent = diff + 'd'; lblEl.textContent = '여행 진행 중!'; }
+}
+updateDday();
+
+// ======== CHECKLIST ========
+function toggleCheck(el) {
+  el.classList.toggle('checked');
+  el.querySelector('.checkbox').innerHTML = el.classList.contains('checked') ? '✓' : '';
+  const all = document.querySelectorAll('.check-item');
+  const done = document.querySelectorAll('.check-item.checked');
+  const pct = Math.round(done.length / all.length * 100);
+  document.getElementById('check-text').textContent = done.length + ' / ' + all.length + ' 완료';
+  document.getElementById('check-pct').textContent = pct + '%';
+  document.getElementById('check-bar').style.width = pct + '%';
+}
+
+// ======== BUDGET ========
+let totalBudget = 0, expenses = [];
+function setBudget() {
+  const v = parseInt(document.getElementById('budget-init').value);
+  if (!v || v<=0) return;
+  totalBudget = v; expenses = [];
+  document.getElementById('expense-list').innerHTML = '<div class="empty-state">아직 지출 내역이 없어요 🌟</div>';
+  renderBudget();
+}
+function addExpense() {
+  const name = document.getElementById('expense-name').value.trim();
+  const amt = parseInt(document.getElementById('expense-amt').value);
+  if (!name || !amt || amt<=0) return;
+  expenses.push({name, amt});
+  document.getElementById('expense-name').value = '';
+  document.getElementById('expense-amt').value = '';
+  renderBudget();
+  renderExpenseList();
+}
+function removeExpense(i) {
+  expenses.splice(i,1);
+  renderBudget();
+  renderExpenseList();
+}
+function renderExpenseList() {
+  const list = document.getElementById('expense-list');
+  if(expenses.length===0) { list.innerHTML='<div class="empty-state">아직 지출 내역이 없어요 🌟</div>'; return; }
+  list.innerHTML = expenses.map((e,i) =>
+    `<div class="expense-item"><span class="expense-label">${e.name}</span><span class="expense-amt">-${e.amt.toLocaleString()}원</span><button class="btn-danger" onclick="removeExpense(${i})">삭제</button></div>`
+  ).join('');
+}
+function renderBudget() {
+  const spent = expenses.reduce((s,e)=>s+e.amt,0);
+  const left = totalBudget - spent;
+  document.getElementById('budget-left').textContent = totalBudget===0 ? '용돈을 설정하세요' : left.toLocaleString()+'원';
+  document.getElementById('budget-spent-label').textContent = totalBudget>0 ? `총 ${totalBudget.toLocaleString()}원 중 ${spent.toLocaleString()}원 사용` : '';
+}
+
+// ======== MISSIONS (풍부한 미션) ========
+const missions = {
+  daereung: {
+    title: '🏺 대릉원 · 첨성대 미션',
+    subtitle: '신라 역사의 비밀을 풀어라! (각 10점, 총 50점)',
+    quizzes: [
+      {
+        type: 'ox', label: 'OX퀴즈',
+        q: '대릉원 천마총은 신라 왕의 무덤으로, 내부 관람이 가능하다.',
+        ans: 'O',
+        explain: '맞아요! 천마총은 내부에 들어가서 볼 수 있는 특별한 무덤이에요. 들어가면 서늘해요!'
+      },
+      {
+        type: 'chosung', label: '초성퀴즈',
+        q: '천마총에서 발견된 말 안장 가리개에 그려진 그림의 이름은?\n힌트: ㅊ ㅁ ㄷ (천 마 ?)',
+        hint: '🐴 하늘을 나는 신비로운 동물이 그려져 있어요!',
+        opts: ['천마도','봉황도','청룡도','백호도'], ans: 0
+      },
+      {
+        type: 'riddle', label: '수수께끼',
+        q: '나는 362개의 돌로 이루어져 있고,\n신라 선덕여왕이 하늘을 관찰하려고 만들었어요.\n나는 무엇일까요?',
+        hint: '🌟 동양에서 가장 오래된 천문대예요!',
+        opts: ['첨성대','불국사','동궁과월지','에밀레종'], ans: 0
+      },
+      {
+        type: 'blank', label: '빈칸채우기',
+        q: '첨성대를 만든 신라의 왕은 (  )여왕이다.',
+        hint: '선덕? 진덕? 진성? 하나를 골라보세요!',
+        opts: ['선덕','진덕','진성','문무'], ans: 0
+      },
+      {
+        type: 'quiz', label: '4지선다',
+        q: '362개 돌로 쌓인 첨성대! 그 숫자가 뜻하는 것은?',
+        hint: '1년은 몇 일일까요?',
+        opts: ['362일 (음력 1년)','음력 12달+꼭대기 2단','신라 왕 수+꼭대기 2단','선덕여왕 재위 기간'], ans: 0
+      }
+    ]
+  },
+  gyeongju: {
+    title: '✨ 동궁과월지 야경 미션',
+    subtitle: '신라 왕궁의 비밀을 밝혀라! (각 10점, 총 40점)',
+    quizzes: [
+      {
+        type: 'riddle', label: '수수께끼',
+        q: '나는 연못이에요.\n신라 시대엔 궁궐의 정원이었고,\n밤에는 건물이 물에 비쳐 황홀한 야경을 자랑해요.\n나의 옛 이름은 안압지! 지금 이름은?',
+        hint: '🦆 궁궐(동궁)과 연못(월지)를 합치면?',
+        opts: ['동궁과월지','첨성대연못','천마호','신라연못'], ans: 0
+      },
+      {
+        type: 'ox', label: 'OX퀴즈',
+        q: '"동궁과월지"는 통일신라 시대 왕이 실제로 살던 본궁이다.',
+        ans: 'X',
+        explain: '아니에요! 동궁과월지는 본궁이 아니라 별궁(별장 같은 곳)이었어요. 왕자나 귀족들이 사용했답니다.'
+      },
+      {
+        type: 'quiz', label: '4지선다',
+        q: '동궁과월지 야간 반영 사진이 가장 예쁘게 나오는 위치는?',
+        opts: ['북쪽 언덕 위','남쪽 출입구 앞','서쪽 데크','동쪽 정자'], ans: 2
+      },
+      {
+        type: 'chosung', label: '초성퀴즈',
+        q: '동궁과월지가 있는 도시 이름을 초성으로 맞혀보세요!\nㄱ ㅈ (경 ?)',
+        hint: '🏺 신라의 수도이자 이번 수학여행 목적지!',
+        opts: ['경주','광주','고주','경진'], ans: 0
+      }
+    ]
+  },
+  bulguksa: {
+    title: '🛕 불국사 미션',
+    subtitle: '유네스코 세계문화유산을 탐험하라! (각 10점, 총 50점)',
+    quizzes: [
+      {
+        type: 'riddle', label: '수수께끼',
+        q: '나는 불국사에 있는 두 탑 중 하나예요.\n더 화려하고 장식이 많아서\n10원짜리 동전에도 그려져 있답니다.\n나는 누구일까요?',
+        hint: '💰 지갑에서 10원짜리 동전을 꺼내보세요!',
+        opts: ['다보탑','석가탑','미륵탑','아미타탑'], ans: 0
+      },
+      {
+        type: 'ox', label: 'OX퀴즈',
+        q: '불국사의 석가탑은 다보탑보다 더 화려하고 장식이 많다.',
+        ans: 'X',
+        explain: '반대예요! 다보탑이 화려하고, 석가탑은 단순하고 우아한 스타일이에요. 둘 다 아름답지만 스타일이 달라요!'
+      },
+      {
+        type: 'blank', label: '빈칸채우기',
+        q: '불국사는 신라 (  )왕 때 김대성이 창건하였다.',
+        hint: '경덕? 문무? 진흥? 하나를 골라보세요!',
+        opts: ['경덕','문무','진흥','법흥'], ans: 0
+      },
+      {
+        type: 'chosung', label: '초성퀴즈',
+        q: '불국사가 등재된 유네스코 기구의 이름을 초성으로!\nㅇ ㄴ ㅅ ㅋ (유네스코는 영어 약자예요!)',
+        hint: '🌍 세계 문화유산을 지정하는 국제기구예요',
+        opts: ['유네스코','유네코스','유나이티드','유엔코'], ans: 0
+      },
+      {
+        type: 'quiz', label: '4지선다',
+        q: '불국사의 "불국(佛國)"이 의미하는 것은?',
+        opts: ['불꽃의 나라','부처님의 나라','불교 학교','불을 숭배하는 곳'], ans: 1
+      }
+    ]
+  },
+  museum: {
+    title: '🏛 국립경주박물관 미션',
+    subtitle: '신라 천년의 유물을 발견하라! (각 10점, 총 40점)',
+    quizzes: [
+      {
+        type: 'riddle', label: '수수께끼',
+        q: '나는 신라 35대 경덕왕 때 만들어진 거대한 종이에요.\n아이를 쇳물에 넣어 만들었다는 슬픈 전설이 있고,\n그 울음소리가 종소리처럼 들려서 붙여진 별명이 있어요.\n나의 별명은?',
+        hint: '🔔 아이의 울음소리... "에∼밀∼레∼"',
+        opts: ['에밀레종','황금종','신라종','경덕종'], ans: 0
+      },
+      {
+        type: 'ox', label: 'OX퀴즈',
+        q: '국립경주박물관에 있는 에밀레종(성덕대왕신종)은 현재도 직접 타종할 수 있다.',
+        ans: 'X',
+        explain: '아니에요! 에밀레종은 너무 소중한 국보라서 직접 타종은 불가능해요. 대신 음향으로 종소리를 들을 수 있어요.'
+      },
+      {
+        type: 'chosung', label: '초성퀴즈',
+        q: '신라 왕이 머리에 쓰던 화려한 금으로 만든 모자 장식은?\nㄱ ㄱ (금 ?)',
+        hint: '👑 신라를 대표하는 유물! 황금으로 만들어졌어요',
+        opts: ['금관','금탑','금인','금각'], ans: 0
+      },
+      {
+        type: 'quiz', label: '4지선다',
+        q: '신라의 수도 이름은 무엇일까요?',
+        hint: '지금의 경주예요!',
+        opts: ['한성','웅진','금성(서라벌)','부여'], ans: 2
+      }
+    ]
+  },
+  hwangni: {
+    title: '🛍 황리단길 미션',
+    subtitle: '경주의 힙스터 골목을 정복하라! (각 10점, 총 40점)',
+    quizzes: [
+      {
+        type: 'riddle', label: '수수께끼',
+        q: '나는 경주 황남동에 있는 골목이에요.\n한옥 카페와 현대 맛집이 어우러져 있고,\n서울의 "경리단길"에서 이름을 따왔어요.\n나는 누구일까요?',
+        hint: '🏘️ 황남동 + 리단길 = ?',
+        opts: ['황리단길','황남단길','경리단길','황금단길'], ans: 0
+      },
+      {
+        type: 'chosung', label: '초성퀴즈',
+        q: '황리단길의 대표 먹거리! 팥소가 들어간 납작한 빵의 이름은?\nㅎ ㄴ ㅂ (황 남 ?)',
+        hint: '🍞 경주 황남동에서 유래한 전통 빵이에요',
+        opts: ['황남빵','황금빵','찰보리빵','신라빵'], ans: 0
+      },
+      {
+        type: 'ox', label: 'OX퀴즈',
+        q: '황리단길은 경주시 황남동에 위치해 있다.',
+        ans: 'O',
+        explain: '정답! 황리단길은 경주 황남동 일대의 골목이에요. 황남동의 "황"과 경리단길의 "리단길"을 합쳐 황리단길!'
+      },
+      {
+        type: 'quiz', label: '4지선다',
+        q: '황리단길에서 줄이 가장 길다면 그 가게는?',
+        opts: ['관광객이 없는 한산한 가게','현지인도 찾는 맛집','새로 생긴 무명 가게','경주월드 매표소'], ans: 1
+      }
+    ]
+  }
+};
+
+const missionScores = {};
+let totalScore = 0, solvedCount = 0;
+
+function openMission(key) {
+  const m = missions[key];
+  document.getElementById('modal-title').textContent = m.title;
+  document.getElementById('modal-subtitle').textContent = m.subtitle;
+  const prev = missionScores[key] || {};
+  let html = '';
+
+  m.quizzes.forEach((q, qi) => {
+    const answered = prev[qi] !== undefined;
+    const correct = prev[qi] === true;
+    const typeClass = {quiz:'type-quiz', riddle:'type-riddle', chosung:'type-chosung', blank:'type-blank', ox:'type-oxquiz', order:'type-order'}[q.type] || 'type-quiz';
+    const typeLabel = {quiz:'📝 4지선다', riddle:'🔍 수수께끼', chosung:'🔤 초성퀴즈', blank:'📖 빈칸채우기', ox:'⭕ OX퀴즈', order:'🔢 순서맞추기'}[q.type] || '📝 퀴즈';
+
+    html += `<div class="quiz-block">
+      <span class="quiz-type-badge ${typeClass}">${typeLabel}</span>
+      <div class="quiz-q">Q${qi+1}. ${q.q}</div>`;
+
+    if (q.hint) {
+      html += `<div class="quiz-hint">${q.hint}</div>`;
+    }
+
+    if (q.type === 'ox') {
+      html += `<div class="ox-options">`;
+      ['O','X'].forEach(v => {
+        let cls = 'ox-btn';
+        if (answered) {
+          if (v === q.ans) cls += ' correct';
+          else if (prev['sel_'+qi] === v && !correct) cls += ' wrong';
+        }
+        html += `<button class="${cls}" ${answered?'disabled':''} onclick="answerOX('${key}',${qi},'${v}','${q.ans}',this)">${v==='O'?'⭕':'❌'}</button>`;
+      });
+      html += `</div>`;
+    } else {
+      html += `<div class="quiz-options">`;
+      q.opts.forEach((o, oi) => {
+        let cls = 'quiz-opt';
+        if (answered) {
+          if (oi === q.ans) cls += ' correct';
+          else if (prev['sel_'+qi] === oi && !correct) cls += ' wrong';
+        }
+        html += `<button class="${cls}" ${answered?'disabled':''} onclick="answerQuiz('${key}',${qi},${oi},${q.ans},this)">${o}</button>`;
+      });
+      html += `</div>`;
+    }
+
+    html += `<div class="quiz-result ${answered?'show '+(correct?'ok':'no'):''}" id="qr-${key}-${qi}">
+      ${answered ? (correct ? '✅ 정답이에요! +10점' : '❌ 오답이에요. 정답: ' + (q.type==='ox' ? q.ans==='O'?'⭕ O':'❌ X' : q.opts[q.ans]) + (q.explain?'<br>💡 '+q.explain:'')) : ''}
+    </div></div>`;
+  });
+
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('mission-modal').classList.add('open');
+}
+
+function answerQuiz(key, qi, sel, ans, btn) {
+  if (!missionScores[key]) missionScores[key] = {};
+  if (missionScores[key][qi] !== undefined) return;
+  const correct = sel === ans;
+  missionScores[key][qi] = correct;
+  missionScores[key]['sel_'+qi] = sel;
+  const res = document.getElementById('qr-'+key+'-'+qi);
+  const m = missions[key];
+  res.className = 'quiz-result show ' + (correct ? 'ok' : 'no');
+  const explainTxt = m.quizzes[qi].explain ? '<br>💡 ' + m.quizzes[qi].explain : '';
+  res.innerHTML = correct ? '✅ 정답이에요! +10점' : '❌ 오답이에요. 정답: ' + m.quizzes[qi].opts[ans] + explainTxt;
+  const opts = btn.parentElement.querySelectorAll('.quiz-opt');
+  opts.forEach((o,i) => {
+    o.disabled = true;
+    if (i === ans) o.classList.add('correct');
+    else if (i === sel && !correct) o.classList.add('wrong');
+  });
+  recalcScore();
+}
+
+function answerOX(key, qi, sel, ans, btn) {
+  if (!missionScores[key]) missionScores[key] = {};
+  if (missionScores[key][qi] !== undefined) return;
+  const correct = sel === ans;
+  missionScores[key][qi] = correct;
+  missionScores[key]['sel_'+qi] = sel;
+  const res = document.getElementById('qr-'+key+'-'+qi);
+  const q = missions[key].quizzes[qi];
+  res.className = 'quiz-result show ' + (correct ? 'ok' : 'no');
+  const explainTxt = q.explain ? '<br>💡 ' + q.explain : '';
+  res.innerHTML = correct ? '✅ 정답이에요! +10점' : `❌ 오답이에요. 정답: ${ans==='O'?'⭕ O':'❌ X'}${explainTxt}`;
+  const btns = btn.parentElement.querySelectorAll('.ox-btn');
+  btns.forEach(b => {
+    b.disabled = true;
+    const v = b.textContent.includes('⭕') ? 'O' : 'X';
+    if (v === ans) b.classList.add('correct');
+    else if (v === sel && !correct) b.classList.add('wrong');
+  });
+  recalcScore();
+}
+
+function recalcScore() {
+  let total = 0, solved = 0;
+  Object.keys(missionScores).forEach(key => {
+    const s = missionScores[key];
+    missions[key].quizzes.forEach((q,qi) => {
+      if (s[qi] !== undefined) { solved++; if (s[qi]) total += 10; }
+    });
+    const cnt = missions[key].quizzes.filter((q,qi) => s[qi] !== undefined).length;
+    const pts = missions[key].quizzes.filter((q,qi) => s[qi]===true).length * 10;
+    document.getElementById('score-'+key).textContent = cnt + '/' + missions[key].quizzes.length + '문제 · ' + pts + '점';
+  });
+  document.getElementById('total-score').textContent = total + '점';
+  document.getElementById('solved-count').textContent = solved;
+  totalScore = total; solvedCount = solved;
+  updateRanking();
+}
+
+function closeMission() { document.getElementById('mission-modal').classList.remove('open'); }
+function closeMissionOnBg(e) { if(e.target===document.getElementById('mission-modal')) closeMission(); }
+
+// ======== PHOTO MISSIONS ========
+const pmData = Array(8).fill(null).map(() => ({ photo: null, done: false, score: 0 }));
+const pmScores = [20, 20, 25, 20, 15, 15, 15, 25];
+let pmTotalScore = 0;
+
+function handlePMUpload(idx, event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    pmData[idx].photo = e.target.result;
+    const zone = document.getElementById('pm-zone-' + idx);
+    const preview = document.getElementById('pm-preview-' + idx);
+    const btn = document.getElementById('pm-btn-' + idx);
+    zone.classList.add('has-photo');
+    zone.innerHTML = '<i class="ti ti-check" style="font-size:24px;color:var(--green)"></i><div style="font-size:12px;color:var(--green);margin-top:6px;font-weight:600">사진 선택됨!</div>';
+    preview.src = e.target.result;
+    preview.classList.add('show');
+    btn.style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+const pmMissionPrompts = [
+  '이 사진이 천마총 또는 대릉원 앞에서 탐험가처럼 포즈를 취한 사진인지 판단해주세요.',
+  '이 사진에 첨성대가 보이는지, 그리고 재미있는 각도나 낮은 시점에서 찍었는지 판단해주세요.',
+  '이 사진이 동궁과월지(안압지) 야경이나 연못의 반영(Reflection)을 담은 사진인지 판단해주세요.',
+  '이 사진에 불국사의 두 탑(다보탑과 석가탑)이 함께 담겨 있는지 판단해주세요.',
+  '이 사진이 박물관에서 에밀레종이나 큰 종 앞에서 귀를 기울이는 포즈를 취한 사진인지 판단해주세요.',
+  '이 사진에 황남빵, 찰보리빵, 또는 경주 전통 빵/음식을 먹거나 들고 있는 모습이 담겨 있는지 판단해주세요.',
+  '이 사진이 놀이공원이나 경주월드에서 찍은 사진인지 판단해주세요.',
+  '이 사진이 5명 이상이 함께 찍은 단체사진인지 판단해주세요.',
+];
+
+async function judgePhotoMission(idx) {
+  if (!pmData[idx].photo) return;
+  const btn = document.getElementById('pm-btn-' + idx);
+  const resultEl = document.getElementById('pm-result-' + idx);
+  const card = document.getElementById('pm-card-' + idx);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> AI 판정 중...';
+  resultEl.className = 'ai-judge-result show';
+  resultEl.textContent = 'AI가 사진을 분석하고 있어요... ✨';
+
+  try {
+    const base64 = pmData[idx].photo.split(',')[1];
+    const mtype = pmData[idx].photo.split(';')[0].split(':')[1];
+
+    const GEMINI_KEY = 'AIzaSyD_63KvWqMazjyVgVSqdzrlkTI-AQtnTWU';
+    const prompt = `당신은 초등학교 수학여행 사진 미션을 판정하는 AI입니다.
+사진을 보고 아래 미션 달성 여부를 판단해주세요.
+
+미션: ${pmMissionPrompts[idx]}
+
+반드시 다음 형식으로 답해주세요:
+[판정: ✅ 미션 성공! / ❌ 미션 실패]
+[이유: 2-3문장으로 재미있게 설명, 초등학생이 이해할 수 있는 표현]
+
+판정이 애매하거나 사진이 관련 장소처럼 보이면 성공으로 판정해 주세요.
+아이들의 도전 의지를 응원하는 따뜻한 말투를 사용해주세요.`;
+
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: mtype, data: base64 } },
+              { text: prompt }
+            ]
+          }],
+          generationConfig: { maxOutputTokens: 400, temperature: 0.4 }
+        })
+      }
+    );
+    const data = await resp.json();
+    if (data.error) {
+      if (data.error.code === 429) {
+        resultEl.innerHTML = '⏳ 요청이 너무 많아요! 1분 후에 다시 눌러주세요.';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-sparkles" style="font-size:14px"></i> AI로 미션 판정받기';
+        return;
+      }
+      throw new Error(data.error.message);
+    }
+
+    // gemini-2.0-flash는 thinking 모드로 동작 — parts 중 text 타입만 골라서 합침
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const text = parts
+      .filter(p => p.text && !p.thought)  // thought 파트 제외, 실제 텍스트만
+      .map(p => p.text)
+      .join('') || '판정을 완료하지 못했어요.';
+
+    // 판정 결과를 이쁘게 파싱해서 표시
+    const isSuccess = text.includes('✅') || text.includes('미션 성공');
+    const lines = text.replace(/\[판정:\s*/g,'').replace(/\[이유:\s*/g,'').replace(/\]/g,'').trim();
+    resultEl.innerHTML = `
+      <div style="font-size:15px;font-weight:800;margin-bottom:8px;color:${isSuccess?'#2D5023':'#8B2020'}">
+        ${isSuccess ? '✅ 미션 성공!' : '❌ 미션 실패'}
+      </div>
+      <div style="font-size:12px;line-height:1.7;color:var(--ink)">
+        ${lines.replace(/\n/g,'<br>')}
+      </div>`;
+    const success = isSuccess;
+    if (success && !pmData[idx].done) {
+      pmData[idx].done = true;
+      pmData[idx].score = pmScores[idx];
+      pmTotalScore += pmScores[idx];
+      card.classList.add('completed');
+      const completeBadge = document.createElement('div');
+      completeBadge.className = 'complete-badge';
+      completeBadge.innerHTML = `✅ 미션 완료! +${pmScores[idx]}점`;
+      card.appendChild(completeBadge);
+      updatePMProgress();
+      updateRanking();
+
+      // ── 미션 성공 사진 → 공유 갤러리 자동 업로드 ──
+      autoUploadMissionPhoto(idx);
+    }
+  } catch(e) {
+    resultEl.textContent = '판정에 실패했어요. 인터넷 연결을 확인하고 다시 시도해주세요.';
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-sparkles" style="font-size:14px"></i> 다시 판정받기';
+}
+
+function updatePMProgress() {
+  const done = pmData.filter(p => p.done).length;
+  const total = pmData.length;
+  document.getElementById('pm-done').textContent = done;
+  document.getElementById('pm-total').textContent = total;
+  document.getElementById('pm-bar').style.width = (done/total*100) + '%';
+}
+
+// ── 포토챌린지 미션 성공 사진 자동 갤러리 업로드 ──
+const pmMissionTitles = [
+  '🏺 천마총 역사탐험가 포즈',
+  '🔭 첨성대와 같은 높이 사진',
+  '✨ 동궁과월지 야경 반영',
+  '🛕 불국사 다보탑·석가탑',
+  '🏛 박물관 에밀레종 앞에서',
+  '🎢 경주월드 롤러코스터 표정',
+  '🛍 황리단길 황남빵 먹방',
+  '🌙 야경 인생샷 도전',
+];
+
+async function autoUploadMissionPhoto(idx) {
+  const photoData = pmData[idx]?.photo;
+  if (!photoData) return;
+  const uploader = rankName || '익명';
+  const missionTitle = pmMissionTitles[idx] || `미션 ${idx+1}`;
+  const caption = `📸 포토챌린지 성공! ${missionTitle}`;
+
+  try {
+    // Firebase 초기화 (이미 됐으면 스킵)
+    if (!fbReady) await initFirebase().catch(() => null);
+    if (!fbReady) return;
+
+    // base64 → Blob 변환
+    const res = await fetch(photoData);
+    const blob = await res.blob();
+    const resized = await resizeImage(blob, 1280, 0.82);
+    const filename = `gallery/mission_${Date.now()}_${uploader}.jpg`;
+    const ref = fbStorage.ref(filename);
+    await ref.put(resized);
+    const url = await ref.getDownloadURL();
+
+    await fbDb.collection('gallery').add({
+      url, uploader, caption,
+      likes: 0, likedBy: [],
+      isMission: true,
+      missionIdx: idx,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      filename,
+    });
+
+    showToast(`🎉 포토챌린지 사진이 갤러리에 공유됐어요!`);
+  } catch(e) {
+    // 자동 업로드 실패 시 조용히 무시 (사용자 경험 방해 않음)
+    console.log('미션 사진 자동 업로드 실패:', e);
+  }
+}
+
+// ======== RANKING ========
+let rankName = '';
+const rankData = {};
+
+function registerRank() {
+  const v = document.getElementById('rank-name-input').value.trim();
+  if (!v) return;
+  rankName = v;
+  document.getElementById('rank-registered').style.display = 'block';
+  document.getElementById('rank-registered').textContent = '✅ ' + v + '님으로 등록되었습니다!';
+  updateRanking();
+}
+
+function updateRanking() {
+  if (rankName) {
+    const stampBasePts = stampPlaces ? stampPlaces.filter(p=>stampEarned&&stampEarned[p.id]).reduce((s,p)=>s+p.pts,0) : 0;
+    const stampTotal = stampBasePts + (stampBonusPts||0);
+    rankData[rankName] = { quiz: totalScore, photo: pmTotalScore, stamp: stampTotal, total: totalScore + pmTotalScore + stampTotal };
+  }
+  renderRanking();
+}
+
+const rankTab = { current: 'all' };
+function switchRankTab(t) {
+  rankTab.current = t;
+  document.getElementById('ranktab-all').className = 'tab-s' + (t==='all' ? ' active' : '');
+  document.getElementById('ranktab-photo').className = 'tab-s' + (t==='photo' ? ' active' : '');
+  renderRanking();
+}
+
+function renderRanking() {
+  const key = rankTab.current === 'photo' ? 'photo' : 'total';
+  const sorted = Object.entries(rankData).sort((a,b) => b[1][key] - a[1][key]);
+  if (sorted.length === 0) {
+    document.getElementById('ranking-list').innerHTML = '<div class="empty-state">미션을 풀어 점수를 획득하세요! 🏆</div>';
+    return;
+  }
+  const medals = ['🥇','🥈','🥉'];
+  document.getElementById('ranking-list').innerHTML = sorted.map(([name, scores], i) => `
+    <div class="rank-item">
+      <div class="rank-badge ${i<3?'rank-'+(i+1):'rank-other'}">${medals[i]||i+1}</div>
+      <div class="rank-name">${name}${name===rankName?' (나)':''}</div>
+      <div><div class="rank-pts">${scores[key]}점</div></div>
+    </div>
+  `).join('');
+}
+
+function shareRanking(type) {
+  const key = type === 'photo' ? 'photo' : 'total';
+  const label = type === 'photo' ? '📸 포토 랭킹' : '🏆 전체 랭킹';
+  const sorted = Object.entries(rankData).sort((a,b) => b[1][key] - a[1][key]);
+  if (sorted.length === 0) { alert('랭킹에 참여한 학생이 없어요!'); return; }
+  const medals = ['🥇','🥈','🥉'];
+  let text = `🏺 의령초 수학여행 ${label}\n`;
+  text += `━━━━━━━━━━━━━\n`;
+  sorted.forEach(([name, scores], i) => {
+    text += `${medals[i]||i+1+'위'} ${name}: ${scores[key]}점\n`;
+  });
+  text += `━━━━━━━━━━━━━\n📅 ${new Date().toLocaleString('ko-KR')}`;
+  const resultEl = document.getElementById('share-result');
+  if (navigator.share) {
+    navigator.share({ title: `의령초 수학여행 ${label}`, text }).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(text).then(() => {
+      resultEl.style.display = 'block';
+      resultEl.textContent = '✅ 클립보드에 복사되었어요!\n\n' + text;
+      setTimeout(() => { resultEl.style.display = 'none'; }, 5000);
+    }).catch(() => {
+      resultEl.style.display = 'block';
+      resultEl.textContent = text;
+    });
+  }
+}
+// ======== FIREBASE SHARED GALLERY ========
+// Firebase SDK (compat 방식 — CDN, import 불필요)
+const FB_CONFIG = {
+  apiKey: "AIzaSyBAZlMrVqbz3Z0YpgONzeuqUOH3GgtmcKM",
+  authDomain: "uiryeong-trip.firebaseapp.com",
+  projectId: "uiryeong-trip",
+  storageBucket: "uiryeong-trip-pahid",
+  messagingSenderId: "558848637726",
+  appId: "1:558848637726:web:cf93252c75631f448be70f"
+};
+
+let fbApp = null, fbDb = null, fbStorage = null;
+let fbReady = false;
+
+function initFirebase() {
+  if (fbReady) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    // Firebase SDK 동적 로드
+    const scripts = [
+      'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js',
+      'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js',
+      'https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js',
+    ];
+    let loaded = 0;
+    scripts.forEach(src => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => {
+        loaded++;
+        if (loaded === scripts.length) {
+          try {
+            fbApp = firebase.initializeApp(FB_CONFIG);
+            fbDb = firebase.firestore();
+            fbStorage = firebase.storage();
+            fbReady = true;
+            setGalleryStatus('connected');
+            resolve();
+          } catch(e) { setGalleryStatus('error'); reject(e); }
+        }
+      };
+      s.onerror = () => { setGalleryStatus('error'); reject(); };
+      document.head.appendChild(s);
+    });
+  });
+}
+
+function setGalleryStatus(state) {
+  const dot = document.getElementById('gallery-status-dot');
+  const txt = document.getElementById('gallery-status-text');
+  if (!dot) return;
+  const map = {
+    connecting: ['#F59E0B', '⏳ Firebase 연결 중...'],
+    connected:  ['#22C55E', '✅ 연결됨 · 실시간 공유 가능'],
+    error:      ['#EF4444', '❌ 연결 실패 · 인터넷을 확인해주세요'],
+    uploading:  ['#3B82F6', '⬆️ 업로드 중...'],
+  };
+  const [color, text] = map[state] || ['#D1D5DB', state];
+  dot.style.background = color;
+  txt.textContent = text;
+}
+
+// ── 탭 전환 ──
+let galleryFilter = 'all';
+let galleryPhotoSelected = null;
+let galleryPhotoDocs = [];
+let viewingDocId = null;
+
+function switchPhotoTab(t) {
+  document.getElementById('phototab-mine').className  = 'tab-s' + (t==='mine'  ?' active':'');
+  document.getElementById('phototab-shared').className = 'tab-s' + (t==='shared'?' active':'');
+  document.getElementById('photo-panel-mine').style.display   = t==='mine'  ? 'block':'none';
+  document.getElementById('photo-panel-shared').style.display = t==='shared' ? 'block':'none';
+  if (t === 'shared') {
+    setGalleryStatus('connecting');
+    initFirebase().then(() => loadGallery()).catch(() => {});
+  }
+}
+
+// ── 갤러리 필터 ──
+function setGalleryFilter(f, btn) {
+  galleryFilter = f;
+  document.querySelectorAll('.gallery-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGalleryDocs();
+}
+
+// ── 갤러리 로드 ──
+async function loadGallery() {
+  if (!fbReady) { await initFirebase(); }
+  document.getElementById('gallery-loading').style.display = 'block';
+  document.getElementById('gallery-grid').style.display = 'none';
+  document.getElementById('gallery-empty').style.display = 'none';
+  try {
+    const snap = await fbDb.collection('gallery')
+      .orderBy('createdAt', 'desc')
+      .limit(60)
+      .get();
+    galleryPhotoDocs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    document.getElementById('gallery-loading').style.display = 'none';
+    document.getElementById('gallery-grid').style.display = 'grid';
+    renderGalleryDocs();
+  } catch(e) {
+    document.getElementById('gallery-loading').textContent = '❌ 불러오기 실패. 새로고침을 눌러보세요.';
+  }
+}
+
+function renderGalleryDocs() {
+  const grid = document.getElementById('gallery-grid');
+  const empty = document.getElementById('gallery-empty');
+  const myName = rankName || '익명';
+  let docs = galleryPhotoDocs;
+  if (galleryFilter === 'mine') docs = docs.filter(d => d.uploader === myName);
+  if (galleryFilter === 'mission') docs = docs.filter(d => d.isMission === true);
+  const cnt = galleryPhotoDocs.length;
+  document.getElementById('gallery-count').textContent = cnt > 0 ? `(총 ${cnt}장)` : '';
+  if (docs.length === 0) { grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = docs.map(doc => {
+    const isMine = doc.uploader === myName;
+    const timeStr = doc.createdAt ? new Date(doc.createdAt.toDate()).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
+    const liked = (doc.likedBy||[]).includes(myName);
+    return `<div class="gallery-card" onclick="openPhotoModal('${doc.id}')">
+      ${isMine ? '<div class="gallery-mine-badge">내 사진</div>' : ''}
+      ${doc.isMission ? '<div style="position:absolute;top:6px;left:6px;background:linear-gradient(135deg,#4A6741,#6B8F62);color:white;font-size:9px;font-weight:700;padding:2px 7px;border-radius:8px">📸 챌린지</div>' : ''}
+      <img src="${doc.url}" loading="lazy" alt="공유사진">
+      <div class="gallery-card-body">
+        <div class="gallery-card-name">📷 ${doc.uploader || '익명'}</div>
+        ${doc.caption ? `<div class="gallery-card-caption">${doc.caption}</div>` : ''}
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div class="gallery-card-time">${timeStr}</div>
+          <div class="gallery-likes ${liked?'liked':''}" onclick="event.stopPropagation();toggleLike('${doc.id}')">
+            ${liked?'❤️':'🤍'} ${(doc.likes||0)}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── 사진 선택 미리보기 ──
+function handleGallerySelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  galleryPhotoSelected = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prev = document.getElementById('gallery-preview');
+    prev.src = e.target.result;
+    prev.style.display = 'block';
+    document.getElementById('gallery-upload-btn').style.display = 'flex';
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── 업로드 ──
+async function uploadToGallery() {
+  if (!galleryPhotoSelected) return;
+  if (!fbReady) { await initFirebase().catch(()=>{}); }
+  if (!fbReady) { alert('Firebase에 연결할 수 없어요. 인터넷을 확인해주세요.'); return; }
+
+  const uploader = rankName || '익명';
+  const caption  = document.getElementById('gallery-caption-input').value.trim();
+  const btn      = document.getElementById('gallery-upload-btn');
+  const prog     = document.getElementById('gallery-upload-progress');
+  const bar      = document.getElementById('gallery-progress-bar');
+  const progTxt  = document.getElementById('gallery-progress-text');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 업로드 중...';
+  prog.style.display = 'block';
+  setGalleryStatus('uploading');
+
+  try {
+    // 이미지 리사이즈 (최대 1280px, JPEG 0.82)
+    const resized = await resizeImage(galleryPhotoSelected, 1280, 0.82);
+    const filename = `gallery/${Date.now()}_${uploader}.jpg`;
+    const ref = fbStorage.ref(filename);
+    const uploadTask = ref.put(resized);
+
+    uploadTask.on('state_changed',
+      snap => {
+        const pct = Math.round(snap.bytesTransferred / snap.totalBytes * 100);
+        bar.style.width = pct + '%';
+        progTxt.textContent = `업로드 중... ${pct}%`;
+      },
+      err => { throw err; },
+    );
+
+    await uploadTask;
+    const url = await ref.getDownloadURL();
+
+    // Firestore에 메타데이터 저장
+    await fbDb.collection('gallery').add({
+      url, uploader, caption,
+      likes: 0, likedBy: [],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      filename,
+    });
+
+    setGalleryStatus('connected');
+    prog.style.display = 'none';
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-cloud-upload" style="font-size:15px"></i> 갤러리에 올리기';
+    btn.style.display = 'none';
+    document.getElementById('gallery-preview').style.display = 'none';
+    document.getElementById('gallery-caption-input').value = '';
+    galleryPhotoSelected = null;
+
+    // 성공 토스트
+    showToast('🎉 갤러리에 올렸어요!');
+    loadGallery();
+  } catch(e) {
+    setGalleryStatus('error');
+    progTxt.textContent = '❌ 업로드 실패: ' + (e.message || '다시 시도해주세요');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-cloud-upload" style="font-size:15px"></i> 다시 시도';
+  }
+}
+
+// ── 이미지 리사이즈 (Canvas) ──
+function resizeImage(file, maxPx, quality) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxPx || h > maxPx) {
+        if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+        else       { w = Math.round(w * maxPx / h); h = maxPx; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => { URL.revokeObjectURL(url); resolve(blob); }, 'image/jpeg', quality);
+    };
+    img.src = url;
+  });
+}
+
+// ── 좋아요 ──
+async function toggleLike(docId) {
+  if (!fbReady) return;
+  const myName = rankName || '익명';
+  const doc = galleryPhotoDocs.find(d => d.id === docId);
+  if (!doc) return;
+  const likedBy = doc.likedBy || [];
+  const already = likedBy.includes(myName);
+  const newLikedBy = already ? likedBy.filter(n=>n!==myName) : [...likedBy, myName];
+  const newLikes = newLikedBy.length;
+  // 낙관적 업데이트
+  doc.likes = newLikes; doc.likedBy = newLikedBy;
+  renderGalleryDocs();
+  try {
+    await fbDb.collection('gallery').doc(docId).update({ likes: newLikes, likedBy: newLikedBy });
+  } catch(e) {}
+}
+
+// ── 사진 전체화면 모달 ──
+function openPhotoModal(docId) {
+  const doc = galleryPhotoDocs.find(d => d.id === docId);
+  if (!doc) return;
+  viewingDocId = docId;
+  const myName = rankName || '익명';
+  document.getElementById('photo-modal-img').src = doc.url;
+  document.getElementById('photo-modal-caption').textContent = doc.caption || '';
+  const timeStr = doc.createdAt ? new Date(doc.createdAt.toDate()).toLocaleString('ko-KR') : '';
+  document.getElementById('photo-modal-meta').textContent = `📷 ${doc.uploader || '익명'} · ${timeStr}`;
+  const delBtn = document.getElementById('photo-modal-delete');
+  delBtn.style.display = (doc.uploader === myName) ? 'block' : 'none';
+  document.getElementById('photo-modal').style.display = 'flex';
+}
+function closePhotoModal(e) {
+  if (e && e.target !== document.getElementById('photo-modal') && e.target !== document.querySelector('#photo-modal > button')) return;
+  if (!e) document.getElementById('photo-modal').style.display = 'none';
+  else document.getElementById('photo-modal').style.display = 'none';
+}
+async function deleteGalleryPhoto() {
+  if (!viewingDocId || !fbReady) return;
+  if (!confirm('이 사진을 갤러리에서 삭제할까요?')) return;
+  const doc = galleryPhotoDocs.find(d => d.id === viewingDocId);
+  try {
+    await fbDb.collection('gallery').doc(viewingDocId).delete();
+    if (doc?.filename) await fbStorage.ref(doc.filename).delete().catch(()=>{});
+    document.getElementById('photo-modal').style.display = 'none';
+    showToast('🗑️ 사진을 삭제했어요');
+    loadGallery();
+  } catch(e) { alert('삭제 실패: ' + e.message); }
+}
+
+// ── 토스트 알림 ──
+function showToast(msg) {
+  const el = document.createElement('div');
+  el.textContent = msg;
+  el.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#2D2416;color:#FFE999;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:700;z-index:999;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.3);animation:fadeIn 0.3s ease';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2500);
+}
+
+// ======== 내 사진 (기존) ========
+const photos = [];
+function handlePhotoUpload(event) {
+  const files = Array.from(event.target.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      photos.push({ src: e.target.result, name: file.name, caption: '' });
+      renderPhotos();
+    };
+    reader.readAsDataURL(file);
+  });
+  event.target.value = '';
+}
+function renderPhotos() {
+  const grid = document.getElementById('photo-grid');
+  const empty = document.getElementById('photo-empty');
+  if (photos.length === 0) { grid.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+  grid.innerHTML = photos.map((p,i) => `
+    <div style="grid-column:span 2">
+      <div class="photo-item" style="aspect-ratio:16/9;height:auto">
+        <img src="${p.src}" alt="사진 ${i+1}" style="width:100%;height:180px;object-fit:cover;border-radius:10px">
+        <div class="photo-item-label">${p.caption || '사진 ' + (i+1)}</div>
+        <button class="photo-delete" onclick="deletePhoto(${i})">✕</button>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="ai-caption-btn" style="flex:1" onclick="generateCaption(${i})">
+          <i class="ti ti-sparkles" style="font-size:12px"></i> AI 설명 생성
+        </button>
+        <button style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;padding:8px;border-radius:9px;background:var(--accent-light);color:var(--accent);border:1px solid rgba(61,107,142,0.25);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit" onclick="sharePhotoToGallery(${i})">
+          <i class="ti ti-world-upload" style="font-size:13px"></i> 갤러리 공유
+        </button>
+      </div>
+      <div class="ai-caption-result ${p.caption?'show':''}" id="caption-${i}">${p.caption||''}</div>
+    </div>
+  `).join('');
+}
+
+async function sharePhotoToGallery(i) {
+  const p = photos[i];
+  if (!fbReady) {
+    setGalleryStatus('connecting');
+    await initFirebase().catch(() => { alert('Firebase 연결 실패!'); return; });
+  }
+  const caption = p.caption || prompt('사진 설명을 입력해주세요 (선택사항)') || '';
+  const uploader = rankName || prompt('이름을 입력해주세요') || '익명';
+
+  try {
+    // base64 → Blob
+    const res = await fetch(p.src);
+    const blob = await res.blob();
+    const resized = await resizeImage(blob, 1280, 0.82);
+    const filename = `gallery/${Date.now()}_${uploader}.jpg`;
+    const ref = fbStorage.ref(filename);
+    await ref.put(resized);
+    const url = await ref.getDownloadURL();
+    await fbDb.collection('gallery').add({
+      url, uploader, caption, likes: 0, likedBy: [],
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(), filename
+    });
+    showToast('🎉 갤러리에 공유했어요!');
+  } catch(e) { alert('공유 실패: ' + (e.message||'다시 시도해주세요')); }
+}
+function deletePhoto(i) { photos.splice(i,1); renderPhotos(); }
+async function generateCaption(i) {
+  const p = photos[i];
+  const allBtns = document.querySelectorAll('.ai-caption-btn');
+  const btn = allBtns[i];
+  const resultEl = document.getElementById('caption-'+i);
+  if (!btn) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner" style="border-top-color:#0C4A6E;border-color:rgba(0,0,0,0.1)"></span> 분석 중...';
+  resultEl.className = 'ai-caption-result show';
+  resultEl.textContent = 'AI가 사진을 분석하고 있어요...';
+  try {
+    const base64 = p.src.split(',')[1];
+    const mtype = p.src.split(';')[0].split(':')[1];
+    const GEMINI_KEY = 'AIzaSyD_63KvWqMazjyVgVSqdzrlkTI-AQtnTWU';
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: mtype, data: base64 } },
+              { text: '이 수학여행 사진을 보고 재미있고 따뜻한 한국어 설명을 2~3문장으로 써주세요. 초등학생이 좋아할 만한 생동감 있는 표현을 사용해주세요.' }
+            ]
+          }],
+          generationConfig: { maxOutputTokens: 200, temperature: 0.7 }
+        })
+      }
+    );
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '설명을 생성하지 못했어요.';
+    photos[i].caption = text;
+    resultEl.textContent = text;
+  } catch(e) {
+    resultEl.textContent = '설명 생성에 실패했어요: ' + (e.message || '다시 시도해주세요.');
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-sparkles" style="font-size:12px"></i> AI 설명 생성';
+}
+
+// ======== SEATING ========
+function renderBus() {
+  const grid = document.getElementById('bus-grid');
+  const myName = rankName || '';
+  let html = '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px">';
+  seatNames.forEach((row, ri) => {
+    if (ri === 5) { html += '<div style="grid-column:span 4;height:8px"></div>'; return; }
+    [0,1,2,3].forEach(ci => {
+      const name = ci<2 ? (row[ci]||'') : (ci===2 ? (row[ci+1]||'') : (row[ci+2]||''));
+      html += `<div class="seat ${name?(name===myName?'mine':'taken'):'empty'}" onclick="selectSeat('${name}')">
+        ${name?`<i class="ti ti-user" style="font-size:10px"></i><div class="seat-name">${name}</div>`:'<span style="font-size:10px;color:#D1D5DB">빈자리</span>'}
+      </div>`;
+    });
+  });
+  html += '</div>';
+  grid.innerHTML = html;
+}
+function selectSeat(name) {
+  if (!name) return;
+  if (!rankName) { rankName = name; document.getElementById('rank-registered').textContent='✅ '+name+'님으로 등록되었습니다!'; document.getElementById('rank-registered').style.display='block'; }
+  renderBus();
+}
+function renderRooms() {
+  document.getElementById('room-grid').innerHTML = rooms.map(r => `
+    <div class="room-card">
+      <div class="room-num">🏨 ${r.num}</div>
+      ${r.members.map(m=>`<div class="room-member">${m}</div>`).join('')}
+    </div>
+  `).join('');
+}
+function switchSeatTab(t) {
+  document.getElementById('seattab-bus').className='tab-s'+(t==='bus'?' active':'');
+  document.getElementById('seattab-room').className='tab-s'+(t==='room'?' active':'');
+  document.getElementById('seat-bus').style.display=t==='bus'?'block':'none';
+  document.getElementById('seat-room').style.display=t==='room'?'block':'none';
+}
+// ======== 경주 가이드 이미지 — Wikipedia API 동적 로딩 ========
+const guideImages = [
+  { id: 'gthumb-daereung',  title: 'Daereungwon' },
+  { id: 'gthumb-cheom',     title: 'Cheomseongdae' },
+  { id: 'gthumb-kjworld',   title: 'Gyeongju_World' },
+  { id: 'gthumb-dongung',   title: 'Donggung_Palace_and_Wolji_Pond' },
+  { id: 'gthumb-bulguk',    title: 'Bulguksa' },
+  { id: 'gthumb-museum',    title: 'Gyeongju_National_Museum' },
+  { id: 'gthumb-hwangni',   title: 'Hwangnidan-gil' },
+];
+
+async function loadGuideImage(id, title) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  try {
+    const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=pageimages&format=json&pithumbsize=600&origin=*`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const pages = data.query.pages;
+    const page = pages[Object.keys(pages)[0]];
+    if (page?.thumbnail?.source) {
+      const img = document.createElement('img');
+      img.src = page.thumbnail.source;
+      img.alt = title;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+      // 기존 fallback 제거 후 이미지 삽입
+      el.innerHTML = '';
+      el.appendChild(img);
+    }
+  } catch(e) {
+    // fallback 이모지 그대로 유지
+  }
+}
+
+// 가이드 탭 진입 시 이미지 로드 (한 번만)
+let guideImagesLoaded = false;
+function loadGuideImagesOnce() {
+  if (guideImagesLoaded) return;
+  guideImagesLoaded = true;
+  // 동시 요청 대신 순차적으로 로드 (429 방지)
+  (async () => {
+    for (const { id, title } of guideImages) {
+      await loadGuideImage(id, title);
+      await new Promise(r => setTimeout(r, 200)); // 200ms 간격
+    }
+  })();
+}
+
+// 가이드 탭 nav 버튼에 이미지 로드 연결
+document.querySelector('[onclick="showSection(\'guide\',this)"]')
+  .addEventListener('click', loadGuideImagesOnce);
+
+// ======== STAMP RALLY ========
+// ======== STAMP RALLY (위치 기반) ========
+const stampPlaces = [
+  { id:'daereung',  icon:'🏺', name:'대릉원·천마총',     day:'1일차 09:50', pts:15, lat:35.8347, lng:129.2194, radius:250 },
+  { id:'cheomsung', icon:'🔭', name:'첨성대',            day:'1일차 10:30', pts:15, lat:35.8369, lng:129.2191, radius:200 },
+  { id:'gyeongju',  icon:'🎢', name:'경주월드',           day:'1일차 11:30', pts:10, lat:35.8468, lng:129.1839, radius:400 },
+  { id:'dongung',   icon:'✨', name:'동궁과월지',         day:'1일차 19:10', pts:20, lat:35.8349, lng:129.2243, radius:250 },
+  { id:'bulguksa',  icon:'🛕', name:'불국사',             day:'2일차 09:20', pts:15, lat:35.7897, lng:129.3317, radius:300 },
+  { id:'museum',    icon:'🏛', name:'국립경주박물관',     day:'2일차 10:30', pts:15, lat:35.8328, lng:129.2213, radius:250 },
+  { id:'ashley',    icon:'🍽', name:'애슐리퀸즈',         day:'2일차 점심',  pts:5,  lat:35.8467, lng:129.1910, radius:200 },
+  { id:'hwangni',   icon:'🛍', name:'황리단길',           day:'2일차 13:30', pts:15, lat:35.8293, lng:129.2168, radius:300 },
+];
+
+let stampEarned = {};
+let stampBonusPts = 0;
+let stampWatchId = null;
+let stampCurrentPos = null;
+
+// 두 좌표 사이 거리(m) 계산 — Haversine
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function nearestPlace(lat, lng) {
+  let best = null, bestDist = Infinity;
+  stampPlaces.forEach(p => {
+    const d = haversine(lat, lng, p.lat, p.lng);
+    if (d < bestDist) { bestDist = d; best = p; }
+  });
+  return { place: best, dist: Math.round(bestDist) };
+}
+
+function startStampGPS() {
+  const dot = document.getElementById('stamp-gps-dot');
+  const txt = document.getElementById('stamp-gps-text');
+  if (!navigator.geolocation) {
+    dot.className = 'gps-error';
+    txt.textContent = '이 기기는 GPS를 지원하지 않아요 😢';
+    return;
+  }
+  dot.className = 'gps-searching';
+  txt.textContent = 'GPS 신호 잡는 중... 잠시만 기다려요!';
+
+  stampWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      stampCurrentPos = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: Math.round(pos.coords.accuracy) };
+      dot.className = 'gps-active';
+      const { place, dist } = nearestPlace(stampCurrentPos.lat, stampCurrentPos.lng);
+      txt.textContent = `📡 GPS 연결됨 · 정확도 ±${stampCurrentPos.acc}m`;
+
+      // 가장 가까운 장소 안내
+      const nearbyEl = document.getElementById('stamp-nearby-info');
+      const nearbyName = document.getElementById('stamp-nearby-name');
+      const nearbyDist = document.getElementById('stamp-nearby-dist');
+      nearbyEl.style.display = 'block';
+      nearbyName.textContent = `${place.icon} ${place.name}`;
+      const inRange = dist <= place.radius;
+      if (inRange && !stampEarned[place.id]) {
+        nearbyDist.innerHTML = `<span style="color:var(--moss);font-weight:700">✅ 범위 안에 있어요! 도장 받기 버튼을 누르세요</span>`;
+        document.getElementById('stamp-check-btn').style.background = 'linear-gradient(135deg,#2D5023,#4A6741)';
+      } else if (stampEarned[place.id]) {
+        nearbyDist.innerHTML = `${dist}m · <span style="color:var(--gold);font-weight:700">이미 도장 획득 ✅</span>`;
+        document.getElementById('stamp-check-btn').style.background = '';
+      } else {
+        nearbyDist.textContent = `${dist}m 거리 · 인식 범위 ${place.radius}m 이내로 이동하세요`;
+        document.getElementById('stamp-check-btn').style.background = '';
+      }
+    },
+    err => {
+      dot.className = 'gps-error';
+      const msgs = { 1:'GPS 권한을 허용해 주세요!', 2:'위치 신호를 찾을 수 없어요.', 3:'GPS 응답이 너무 느려요.' };
+      txt.textContent = msgs[err.code] || 'GPS 오류가 발생했어요.';
+    },
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+  );
+}
+
+function checkLocationStamp() {
+  const resultEl = document.getElementById('stamp-check-result');
+  resultEl.style.display = 'block';
+
+  if (!stampCurrentPos) {
+    resultEl.style.background = 'var(--red-light)';
+    resultEl.style.color = 'var(--red)';
+    resultEl.textContent = '📡 GPS 신호를 아직 받지 못했어요. 잠시 기다려보세요!';
+    setTimeout(()=>{ resultEl.style.display='none'; }, 3000);
+    return;
+  }
+
+  const { lat, lng, acc } = stampCurrentPos;
+  const btn = document.getElementById('stamp-check-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> 위치 확인 중...';
+
+  // 각 장소까지 거리 계산
+  const candidates = stampPlaces.map(p => ({ ...p, dist: haversine(lat, lng, p.lat, p.lng) }));
+  const inRange = candidates.filter(p => p.dist <= p.radius + Math.min(acc * 0.5, 50));
+
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-map-pin" style="font-size:16px"></i> 지금 위치로 도장 받기';
+
+    if (inRange.length === 0) {
+      const nearest = candidates.sort((a,b) => a.dist - b.dist)[0];
+      resultEl.style.background = 'var(--red-light)';
+      resultEl.style.color = 'var(--red)';
+      resultEl.textContent = `📍 아직 범위 밖이에요! 가장 가까운 곳: ${nearest.icon} ${nearest.name} (${Math.round(nearest.dist)}m)`;
+      setTimeout(()=>{ resultEl.style.display='none'; }, 4000);
+      return;
+    }
+
+    // 범위 내 장소 중 아직 미획득 우선, 거리순
+    const newPlaces = inRange.filter(p => !stampEarned[p.id]).sort((a,b) => a.dist - b.dist);
+    if (newPlaces.length === 0) {
+      resultEl.style.background = 'var(--gold-light)';
+      resultEl.style.color = 'var(--primary-dark)';
+      resultEl.textContent = `⚠️ 이미 획득한 장소예요! 다음 목적지로 이동해 보세요.`;
+      setTimeout(()=>{ resultEl.style.display='none'; }, 3000);
+      return;
+    }
+
+    // 도장 획득!
+    const place = newPlaces[0];
+    stampEarned[place.id] = true;
+    resultEl.style.background = 'var(--moss-light)';
+    resultEl.style.color = '#2D5023';
+    resultEl.textContent = `🎉 ${place.icon} ${place.name} 도장 획득! +${place.pts}점`;
+    renderStamps();
+    showStampCelebration(place);
+    setTimeout(()=>{ resultEl.style.display='none'; }, 4000);
+  }, 800);
+}
+
+function showStampCelebration(place) {
+  // 기존 팝업 제거
+  const old = document.getElementById('stamp-celebrate-el');
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.id = 'stamp-celebrate-el';
+  el.className = 'stamp-celebrate';
+  el.innerHTML = `<div class="stamp-celebrate-inner">
+    <div class="stamp-celebrate-emoji">${place.icon}</div>
+    <div class="stamp-celebrate-title">${place.name} 도장 획득! 🎉</div>
+    <div class="stamp-celebrate-sub">+${place.pts}점 적립! 계속 모아봐요!</div>
+  </div>`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+function renderStamps() {
+  const grid = document.getElementById('stamp-grid');
+  grid.innerHTML = stampPlaces.map(p => {
+    const got = !!stampEarned[p.id];
+    // 현재 위치 기준 가장 가까운 곳 표시
+    let distTag = '';
+    if (stampCurrentPos && !got) {
+      const d = Math.round(haversine(stampCurrentPos.lat, stampCurrentPos.lng, p.lat, p.lng));
+      const inR = d <= p.radius;
+      distTag = `<div style="font-size:10px;margin-top:4px;color:${inR?'var(--moss)':'var(--stone)'};font-weight:${inR?700:400}">${inR?'✅ 범위 안!':'📍 '+d+'m'}</div>`;
+    }
+    return `<div class="stamp-card ${got?'earned':''}" id="sc-${p.id}">
+      <div class="stamp-seal">✓</div>
+      <div class="stamp-icon">${p.icon}</div>
+      <div class="stamp-name">${p.name}</div>
+      <div class="stamp-day">${p.day}</div>
+      ${distTag}
+      <div class="stamp-pts-badge">${got ? '✅ +'+p.pts+'점!' : '+'+p.pts+'점'}</div>
+    </div>`;
+  }).join('');
+
+  const cnt = Object.keys(stampEarned).length;
+  document.getElementById('stamp-count').textContent = cnt;
+  let bonus = 0;
+  if (cnt >= 4) bonus = 20;
+  if (cnt >= 6) bonus = 50;
+  if (cnt >= 8) bonus = 100;
+  stampBonusPts = bonus;
+  const basePts = stampPlaces.filter(p=>stampEarned[p.id]).reduce((s,p)=>s+p.pts,0);
+  document.getElementById('stamp-pts').textContent = basePts + bonus;
+  updateRanking();
+}
+
+// 스탬프 탭 진입 시 GPS 시작
+document.querySelector('[onclick="showSection(\'stamp\',this)"]').addEventListener('click', () => {
+  if (!stampWatchId) startStampGPS();
+});
+
+renderStamps();
+
+// ======== RANDOM MISSION ========
+const randomMissions = [
+  { text:'🤣 지금 바로 옆 친구에게 경주 역사 퀴즈 하나 내보기!', tip:'틀리면 간식 사주기~', pts:'+5점' },
+  { text:'📸 경주의 하늘 또는 땅만 찍은 예술사진 1장 남기기', tip:'감성적일수록 OK!', pts:'+10점' },
+  { text:'🎭 신라 왕처럼 위엄 있는 표정으로 사진 찍기', tip:'주변 친구들도 신하 포즈 함께!', pts:'+10점' },
+  { text:'🔍 지금 있는 장소에서 영어 안내판 찾아 사진 찍기', tip:'박물관·사찰 어디든 있어요!', pts:'+5점' },
+  { text:'🤝 같은 모둠 친구 전원과 하이파이브 성공하기', tip:'한 명도 빠짐없이!', pts:'+5점' },
+  { text:'🗿 주변에서 가장 오래된 것처럼 보이는 물건 찾아 사진 찍기', tip:'돌? 나무? 유물?', pts:'+10점' },
+  { text:'🧭 지금 내가 있는 장소의 이름을 한자로 쓰거나 외우기', tip:'대릉원=大陵苑, 불국사=佛國寺', pts:'+15점' },
+  { text:'🎵 신라 시대를 배경으로 한 노래 가사 즉흥 창작하기', tip:'친구들 앞에서 1소절 발표!', pts:'+15점' },
+  { text:'🌿 지금 주변에서 나뭇잎 모양이 다른 잎 3종류 수집하기', tip:'자연도 탐험이에요!', pts:'+5점' },
+  { text:'📖 오늘 배운 역사 사실 중 가장 신기한 것 큰소리로 말하기', tip:'친구들이 다 들을 수 있게!', pts:'+5점' },
+  { text:'🎪 첨성대나 불국사 앞에서 발레 포즈로 사진 찍기', tip:'한 발로 서도 OK!', pts:'+10점' },
+  { text:'🤔 지금 이 장소와 관련된 수수께끼를 직접 만들어보기', tip:'친구들이 못 맞히면 성공!', pts:'+15점' },
+  { text:'🏃 모둠원과 함께 가장 빨리 계단 오르내리기 도전', tip:'안전하게! 뛰지는 말기', pts:'+5점' },
+  { text:'🌙 동궁과월지 야경 중 별을 찾아 사진에 담기', tip:'밤하늘도 경주의 일부!', pts:'+20점' },
+  { text:'🍞 황남빵 한 입 베어 물고 맛 평점 매기기 (별 1~5개)', tip:'리뷰어가 되어보자!', pts:'+5점' },
+  { text:'🎠 경주월드에서 탑승 전 줄 서면서 즉흥 댄스 1분', tip:'민망할수록 점수 UP!', pts:'+15점' },
+];
+
+let lastRandomIdx = -1;
+function drawRandomMission() {
+  let idx;
+  do { idx = Math.floor(Math.random() * randomMissions.length); } while (idx === lastRandomIdx);
+  lastRandomIdx = idx;
+  const m = randomMissions[idx];
+  const resultEl = document.getElementById('random-mission-result');
+  const textEl = document.getElementById('random-mission-text');
+  const tipEl = document.getElementById('random-mission-tip');
+  const ptsEl = document.getElementById('random-mission-pts');
+  resultEl.style.display = 'none';
+  textEl.textContent = m.text;
+  tipEl.textContent = '💡 ' + m.tip;
+  ptsEl.textContent = m.pts;
+  setTimeout(() => {
+    resultEl.style.display = 'block';
+    resultEl.className = 'random-mission-anim';
+  }, 50);
+}
+const ADMIN_PW = '2714';
+function openAdminLogin() {
+  document.getElementById('admin-modal').classList.add('open');
+  document.getElementById('admin-pw-screen').style.display = 'block';
+  document.getElementById('admin-main').style.display = 'none';
+  document.getElementById('pw-input').value = '';
+  document.getElementById('pw-error').classList.remove('show');
+}
+function closeAdmin() {
+  document.getElementById('admin-modal').classList.remove('open');
+}
+function checkPW() {
+  const val = document.getElementById('pw-input').value;
+  if (val === ADMIN_PW) {
+    document.getElementById('admin-pw-screen').style.display = 'none';
+    document.getElementById('admin-main').style.display = 'block';
+    loadAdminValues();
+    buildClassEditor(1);
+    buildClassEditor(2);
+    buildSeatEditor();
+    buildRoomEditor();
+  } else {
+    document.getElementById('pw-error').classList.add('show');
+    document.getElementById('pw-input').value = '';
+  }
+}
+function switchAdminTab(t) {
+  ['basic','contact','students'].forEach(tab => {
+    document.getElementById('atab-'+tab).className = 'admin-tab' + (tab===t?' active':'');
+    document.getElementById('admin-tab-'+tab).style.display = tab===t ? 'block' : 'none';
+  });
+}
+
+function switchClassTab(n) {
+  document.getElementById('classtab-1').className = 'admin-tab' + (n===1?' active':'');
+  document.getElementById('classtab-2').className = 'admin-tab' + (n===2?' active':'');
+  document.getElementById('class1-editor').style.display = n===1 ? 'block' : 'none';
+  document.getElementById('class2-editor').style.display = n===2 ? 'block' : 'none';
+}
+
+function loadAdminValues() {
+  document.getElementById('a-title').value = appData.title;
+  document.getElementById('a-sub').value = appData.sub;
+  document.getElementById('a-date').value = appData.date;
+  document.getElementById('a-dday').value = appData.dday;
+  document.getElementById('a-hotel').value = appData.hotel;
+  document.getElementById('a-dinner').value = appData.dinner;
+  document.getElementById('a-lunch2').value = appData.lunch2;
+  document.getElementById('a-theme').value = appData.theme;
+  document.getElementById('a-teacher1-num').value = appData.teacher1Num;
+  document.getElementById('a-teacher2-num').value = appData.teacher2Num;
+  document.getElementById('a-principal-num').value = appData.principalNum;
+  document.getElementById('a-subject-num').value = appData.subjectNum;
+  document.getElementById('a-school-num').value = appData.schoolNum;
+}
+
+function saveBasicInfo() {
+  appData.title = document.getElementById('a-title').value;
+  appData.sub = document.getElementById('a-sub').value;
+  appData.date = document.getElementById('a-date').value;
+  appData.dday = document.getElementById('a-dday').value;
+  appData.hotel = document.getElementById('a-hotel').value;
+  appData.dinner = document.getElementById('a-dinner').value;
+  appData.lunch2 = document.getElementById('a-lunch2').value;
+  appData.theme = document.getElementById('a-theme').value;
+  // 화면 반영
+  document.getElementById('hdr-title').textContent = appData.title;
+  document.getElementById('hdr-sub').textContent = appData.sub;
+  document.getElementById('hdr-date').textContent = appData.date;
+  document.getElementById('dinner-place').textContent = appData.dinner;
+  document.getElementById('lunch2-place').textContent = appData.lunch2;
+  document.getElementById('hotel-name-disp').textContent = appData.hotel;
+  document.getElementById('hotel-name-room').textContent = appData.hotel;
+  appData.dday = document.getElementById('a-dday').value;
+  updateDday();
+  const s = document.getElementById('basic-success');
+  s.classList.add('show');
+  setTimeout(() => s.classList.remove('show'), 2500);
+}
+
+function saveContacts() {
+  appData.teacher1Num = document.getElementById('a-teacher1-num').value;
+  appData.teacher2Num = document.getElementById('a-teacher2-num').value;
+  appData.principalNum = document.getElementById('a-principal-num').value;
+  appData.subjectNum = document.getElementById('a-subject-num').value;
+  appData.schoolNum = document.getElementById('a-school-num').value;
+  // 화면 반영
+  document.getElementById('contact-teacher1-num').textContent = appData.teacher1Num || '가정통신문 참고';
+  document.getElementById('contact-teacher2-num').textContent = appData.teacher2Num || '가정통신문 참고';
+  document.getElementById('contact-principal-num').textContent = appData.principalNum || '가정통신문 참고';
+  document.getElementById('contact-subject-num').textContent = appData.subjectNum || '가정통신문 참고';
+  document.getElementById('contact-school-num').textContent = appData.schoolNum;
+  if (appData.teacher1Num) document.getElementById('contact-teacher1-btn').href = 'tel:' + appData.teacher1Num;
+  if (appData.teacher2Num) document.getElementById('contact-teacher2-btn').href = 'tel:' + appData.teacher2Num;
+  if (appData.principalNum) document.getElementById('contact-principal-btn').href = 'tel:' + appData.principalNum;
+  if (appData.subjectNum) document.getElementById('contact-subject-btn').href = 'tel:' + appData.subjectNum;
+  if (appData.schoolNum) document.getElementById('contact-school-btn').href = 'tel:' + appData.schoolNum;
+  const s = document.getElementById('contact-success');
+  s.classList.add('show');
+  setTimeout(() => s.classList.remove('show'), 2500);
+}
+
+function buildClassEditor(cls) {
+  const list = cls === 1 ? class1Students : class2Students;
+  const el = document.getElementById('class' + cls + '-editor');
+  let html = `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${cls}반 학생 20명을 입력하세요</div>`;
+  html += '<div class="student-grid" style="grid-template-columns:1fr 1fr">';
+  for (let i = 0; i < 20; i++) {
+    html += `<div style="display:flex;align-items:center;gap:4px">
+      <span style="font-size:10px;color:var(--stone);min-width:18px;text-align:right">${i+1}.</span>
+      <input class="student-input" id="cls${cls}-${i}" value="${list[i]||''}" placeholder="이름">
+    </div>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function buildSeatEditor() {
+  const el = document.getElementById('seat-editor');
+  let html = '';
+  const rowLabels = ['1열','2열','3열','4열','5열','예비열'];
+  seatNames.forEach((row, ri) => {
+    if (ri >= 6) return;
+    html += `<div style="margin-bottom:10px">
+      <div class="student-row-label">${rowLabels[ri]} (좌석 4개)</div>
+      <div class="student-grid" style="grid-template-columns:repeat(4,1fr)">`;
+    [0,1,3,4].forEach(ci => {
+      html += `<input class="student-input" id="seat-${ri}-${ci}" value="${row[ci]||''}" placeholder="이름">`;
+    });
+    html += `</div></div>`;
+  });
+  el.innerHTML = html;
+}
+
+function buildRoomEditor() {
+  const el = document.getElementById('room-editor');
+  document.getElementById('room-count-input').value = rooms.length;
+  let html = '';
+  rooms.forEach((room, ri) => {
+    html += `<div class="admin-contact-item" style="margin-bottom:8px">
+      <label>방 이름 (${ri+1}번째)</label>
+      <input class="student-input" id="room-num-${ri}" value="${room.num}" style="margin-bottom:6px">
+      <label style="margin-top:4px">학생 이름 (쉼표로 구분)</label>
+      <input class="student-input" id="room-members-${ri}" value="${room.members.join(', ')}">
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+function adjustRoomCount() {
+  const newCount = parseInt(document.getElementById('room-count-input').value) || rooms.length;
+  if (newCount < 1 || newCount > 20) return;
+  // 현재 입력값 먼저 저장
+  rooms.forEach((room, ri) => {
+    const numInput = document.getElementById('room-num-' + ri);
+    const membersInput = document.getElementById('room-members-' + ri);
+    if (numInput) rooms[ri].num = numInput.value.trim();
+    if (membersInput) rooms[ri].members = membersInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+  });
+  // 방 갯수 조정
+  while (rooms.length < newCount) {
+    rooms.push({ num: (rooms.length + 100) + '호', members: [] });
+  }
+  while (rooms.length > newCount) { rooms.pop(); }
+  buildRoomEditor();
+}
+
+function saveStudents() {
+  // 1반 2반 저장
+  for (let i = 0; i < 20; i++) {
+    const inp1 = document.getElementById('cls1-' + i);
+    const inp2 = document.getElementById('cls2-' + i);
+    if (inp1) class1Students[i] = inp1.value.trim();
+    if (inp2) class2Students[i] = inp2.value.trim();
+  }
+  // 좌석 저장
+  seatNames.forEach((row, ri) => {
+    [0,1,3,4].forEach(ci => {
+      const input = document.getElementById('seat-'+ri+'-'+ci);
+      if (input) seatNames[ri][ci] = input.value.trim();
+    });
+  });
+  // 방 저장
+  rooms.forEach((room, ri) => {
+    const numInput = document.getElementById('room-num-'+ri);
+    const membersInput = document.getElementById('room-members-'+ri);
+    if (numInput) rooms[ri].num = numInput.value.trim();
+    if (membersInput) rooms[ri].members = membersInput.value.split(',').map(s=>s.trim()).filter(Boolean);
+  });
+  renderBus();
+  renderRooms();
+  const s = document.getElementById('students-success');
+  s.classList.add('show');
+  setTimeout(() => s.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>
