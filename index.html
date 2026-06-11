@@ -2589,6 +2589,15 @@ setTimeout(() => {
   setText('hotel-name-disp', appData.hotel);
   setText('hotel-name-room', appData.hotel);
   if (typeof applyContactsToUI === 'function') applyContactsToUI();
+
+  // 등록된 랭킹 이름 복원
+  if (rankName) {
+    const regEl = document.getElementById('rank-registered');
+    const inputEl = document.getElementById('rank-name-input');
+    if (regEl) { regEl.style.display = 'block'; regEl.textContent = '✅ ' + rankName + '님으로 등록되었습니다!'; }
+    if (inputEl) inputEl.value = rankName;
+    setTimeout(() => updateRanking(), 800); // Firebase 준비 후 내 점수 동기화
+  }
 }, 50);
 
 
@@ -3210,23 +3219,34 @@ async function autoUploadMissionPhoto(idx) {
 }
 
 // ======== RANKING ========
-let rankName = '';
+let rankName = localStorage.getItem('rankName') || '';
 const rankData = {};
 
 function registerRank() {
   const v = document.getElementById('rank-name-input').value.trim();
   if (!v) return;
   rankName = v;
+  localStorage.setItem('rankName', v);
   document.getElementById('rank-registered').style.display = 'block';
   document.getElementById('rank-registered').textContent = '✅ ' + v + '님으로 등록되었습니다!';
   updateRanking();
 }
 
-function updateRanking() {
+async function updateRanking() {
   if (rankName) {
     const stampBasePts = stampPlaces ? stampPlaces.filter(p=>stampEarned&&stampEarned[p.id]).reduce((s,p)=>s+p.pts,0) : 0;
     const stampTotal = stampBasePts + (stampBonusPts||0);
-    rankData[rankName] = { quiz: totalScore, photo: pmTotalScore, stamp: stampTotal, total: totalScore + pmTotalScore + stampTotal };
+    const myScore = { quiz: totalScore, photo: pmTotalScore, stamp: stampTotal, total: totalScore + pmTotalScore + stampTotal };
+    rankData[rankName] = myScore;
+    // Firebase에 내 점수 저장 (모든 기기 공유)
+    try {
+      if (!fbReady) await initFirebase();
+      await fbDb.collection('ranking').doc(rankName).set({
+        name: rankName,
+        ...myScore,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) { console.log('[랭킹] 저장 실패:', e); }
   }
   renderRanking();
 }
@@ -3397,6 +3417,16 @@ function startConfigSync() {
       if (typeof updateDday === 'function') updateDday();
       if (typeof applyContactsToUI === 'function') applyContactsToUI();
     }, () => {});
+
+  // 랭킹 실시간 동기화 (전체 학생 점수)
+  fbDb.collection('ranking')
+    .onSnapshot(snap => {
+      snap.forEach(doc => {
+        const d = doc.data();
+        rankData[d.name] = { quiz: d.quiz||0, photo: d.photo||0, stamp: d.stamp||0, total: d.total||0 };
+      });
+      renderRanking();
+    }, (err) => { console.log('[랭킹] 동기화 오류:', err); });
 }
 
 function setGalleryStatus(state) {
